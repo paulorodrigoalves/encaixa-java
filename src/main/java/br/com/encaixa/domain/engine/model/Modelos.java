@@ -64,12 +64,6 @@ public final class Modelos {
 
     // ── Frete ───────────────────────────────────────────────────────────────
 
-    public record ObjetoUsuario(String id, String nome, int larguraMm, int profundidadeMm, Integer alturaMm, String corHex) {}
-
-    public record DivisoriaRender(int xMm, int yMm, int larguraMm, int profundidadeMm, String orientacao) {}
-    public record ObjetoPosicionado(ObjetoUsuario objeto, int xMm, int yMm, int larguraRealMm, int profundidadeRealMm) {}
-    public record LayoutGerado(int larguraTotalMm, int profundidadeTotalMm, int alturaTotalMm, List<DivisoriaRender> divisorias, List<ObjetoPosicionado> objetosPosicionados, int espessuraDivisoriaMm) {}
-
     public record PacoteEstimado(int larguraCm, int alturaCm, int profundidadeCm, double pesoKg) {
     }
 }
