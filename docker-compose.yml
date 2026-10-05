@@ -25,24 +25,8 @@ services:
     networks:
       - encaixa_net
 
-  minio:
-    image: minio/minio:latest
-    container_name: encaixa_minio
-    environment:
-      MINIO_ROOT_USER: admin
-      MINIO_ROOT_PASSWORD: minio_password
-    command: server /data --console-address ":9001"
-    ports:
-      - "9000:9000"
-      - "9001:9001"
-    volumes:
-      - minio_data:/data
-    networks:
-      - encaixa_net
-
 volumes:
   postgres_data:
-  minio_data:
 
 networks:
   encaixa_net:

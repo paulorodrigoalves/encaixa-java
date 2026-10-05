@@ -16,7 +16,7 @@
 	<description>API Encaixa - organizadores de gaveta sob medida</description>
 
 	<properties>
-		<java.version>25</java.version>
+		<java.version>21</java.version>
 		<springdoc.version>3.1.1</springdoc.version>
 		<awssdk.version>2.55.11</awssdk.version>
 	</properties>
@@ -168,4 +168,5 @@
 	</build>
 
 </project>
+
 

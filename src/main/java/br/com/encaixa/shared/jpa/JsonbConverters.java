@@ -2,6 +2,8 @@ package br.com.encaixa.shared.jpa;
 
 import br.com.encaixa.domain.engine.model.Modelos.ItemObjetoSelecionado;
 import br.com.encaixa.domain.engine.model.Modelos.LayoutProporcional;
+import br.com.encaixa.domain.engine.model.Modelos.LayoutGerado;
+import br.com.encaixa.domain.engine.model.Modelos.ObjetoUsuario;
 import br.com.encaixa.venda.cliente.Endereco;
 import jakarta.persistence.AttributeConverter;
 import jakarta.persistence.Converter;
@@ -59,6 +61,21 @@ public final class JsonbConverters {
     }
 
     @Converter
+    public static class LayoutGeradoConverter extends Base<LayoutGerado> {
+        public LayoutGeradoConverter() { super(new TypeReference<>() {}); }
+    }
+
+    @Converter
+    public static class ObjetoUsuarioConverter extends Base<ObjetoUsuario> {
+        public ObjetoUsuarioConverter() { super(new TypeReference<>() {}); }
+    }
+
+    @Converter
+    public static class ObjetosUsuarioListConverter extends Base<List<ObjetoUsuario>> {
+        public ObjetosUsuarioListConverter() { super(new TypeReference<>() {}); }
+    }
+
+    @Converter
     public static class EnderecoConverter extends Base<Endereco> {
         public EnderecoConverter() {
             super(new TypeReference<>() {
@@ -66,3 +83,5 @@ public final class JsonbConverters {
         }
     }
 }
+
+

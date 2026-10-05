@@ -1,6 +1,9 @@
 package br.com.encaixa.venda.cliente;
 
-import jakarta.persistence.Embedded;
+import jakarta.persistence.Convert;
+import jakarta.persistence.Column;
+import org.hibernate.annotations.ColumnTransformer;
+import br.com.encaixa.shared.jpa.JsonbConverters;
 import jakarta.persistence.Entity;
 import jakarta.persistence.GeneratedValue;
 import jakarta.persistence.GenerationType;
@@ -29,9 +32,12 @@ public class Cliente {
     private String email;
     private String telefone;
 
-    @Embedded
+    @Convert(converter = JsonbConverters.EnderecoConverter.class)
+    @ColumnTransformer(write = "?::jsonb")
+    @Column(columnDefinition = "jsonb")
     private Endereco endereco;
 
     @CreationTimestamp
     private OffsetDateTime criadoEm;
 }
+
