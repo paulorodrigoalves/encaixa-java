@@ -4,8 +4,8 @@
 > Este documento contém o contexto arquitetural, regras de negócio e o estado atual do projeto. **Sempre leia este documento antes de propor mudanças arquiteturais ou reescrever entidades.**
 
 ## 1. Visão Geral do Sistema
-O **Encaixa** é um sistema SaaS B2B/B2C para venda de organizadores de gaveta em acrílico sob medida. 
-O motor principal (Layout Engine) calcula dinamicamente a geometria, gerando compartimentos e o orçamento em tempo real baseado em regras de precificação por volume e área de acrílico.
+O **Encaixa** é um sistema SaaS B2B/B2C para venda de organizadores de gaveta em acrílico e MDF sob medida (com revestimentos como veludo, courino e linho). 
+O motor principal (Layout Engine) calcula dinamicamente a geometria, gerando compartimentos e o orçamento em tempo real. Uma característica vital é o cálculo exato de descontos de espessura baseados no material e tipo de tecido, gerando no final da compra um **Plano de Corte** com as medidas exatas para o marceneiro produzir as peças.
 
 *   **Stack:** Java 21, Spring Boot 3.x, PostgreSQL, Flyway, Keycloak (Auth OAuth2/JWT).
 *   **Repositório Frontend Par:** `encaixa-angular` (Angular 19 Standalone + Tailwind).
@@ -34,3 +34,4 @@ O simulador público e a precificação estão integrados no Frontend. O próxim
     *   Salvar os `Compartimentos` vinculados ao Projeto.
     *   Salvar o `Orcamento` final.
 3.  **Layout Dinâmico (Fase 2):** Plugar o `GeradorLayoutPorObjetos` para não depender apenas de templates fixos.
+
