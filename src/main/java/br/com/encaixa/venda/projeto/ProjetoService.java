@@ -15,6 +15,8 @@ import br.com.encaixa.domain.engine.model.Modelos.TipoObjetoConstraint;
 import br.com.encaixa.precificacao.Orcamento;
 import br.com.encaixa.precificacao.OrcamentoRepository;
 import br.com.encaixa.precificacao.RegraPrecificacaoRepository;
+import br.com.encaixa.producao.pedido.Pedido;
+import br.com.encaixa.producao.pedido.PedidoRepository;
 import br.com.encaixa.venda.cliente.Cliente;
 import br.com.encaixa.venda.cliente.ClienteRepository;
 import br.com.encaixa.venda.compartimento.Compartimento;
@@ -22,6 +24,7 @@ import br.com.encaixa.venda.compra.Compra;
 import br.com.encaixa.venda.compra.CompraRepository;
 import br.com.encaixa.venda.projeto.dto.CriarProjetoRequest;
 import br.com.encaixa.venda.projeto.dto.ProjetoSalvoResponse;
+import br.com.encaixa.venda.projeto.dto.ProjetoSalvoResponse.EtapaClienteDTO;
 import lombok.RequiredArgsConstructor;
 import org.springframework.security.oauth2.jwt.Jwt;
 import org.springframework.stereotype.Service;
@@ -29,6 +32,10 @@ import org.springframework.transaction.annotation.Transactional;
 
 import java.math.BigDecimal;
 import java.util.List;
+import java.util.Map;
+import java.util.UUID;
+import java.util.function.Function;
+import java.util.stream.Collectors;
 
 @Service
 @RequiredArgsConstructor
@@ -38,6 +45,7 @@ public class ProjetoService {
     private final CompraRepository compraRepository;
     private final ProjetoRepository projetoRepository;
     private final OrcamentoRepository orcamentoRepository;
+    private final PedidoRepository pedidoRepository;
     private final MaterialRepository materialRepository;
     private final TemplateRepository templateRepository;
     private final TipoObjetoRepository tipoObjetoRepository;
@@ -99,7 +107,6 @@ public class ProjetoService {
         int qtd = req.quantidade() != null && req.quantidade() > 0 ? req.quantidade() : 1;
         BigDecimal totalCompra = calculoPreco.valorTotal().multiply(BigDecimal.valueOf(qtd));
 
-        // Cria a Compra associada ao Cliente
         Compra compra = new Compra();
         compra.setCliente(cliente);
         compra.setStatus(Compra.StatusCompra.FECHADA);
@@ -107,7 +114,6 @@ public class ProjetoService {
         compra.setValorTotal(totalCompra);
         compra = compraRepository.save(compra);
 
-        // Cria o Projeto e seus Compartimentos (respeitando constraint projetos_origem_layout)
         Projeto projeto = new Projeto();
         projeto.setCompra(compra);
         if (template != null) {
@@ -139,7 +145,6 @@ public class ProjetoService {
         projeto.substituirCompartimentos(compartimentoEntities);
         projeto = projetoRepository.save(projeto);
 
-        // Salva o snapshot do Orcamento
         Orcamento orcamento = new Orcamento();
         orcamento.setProjeto(projeto);
         orcamento.setRegraPrecificacao(regraEntity);
@@ -152,21 +157,27 @@ public class ProjetoService {
         orcamento.setValorTotal(calculoPreco.valorTotal());
         orcamentoRepository.save(orcamento);
 
-        return toResponse(projeto, orcamento.getValorTotal(), compartimentoEntities.size());
+        return toResponse(projeto, orcamento.getValorTotal(), compartimentoEntities.size(), null);
     }
 
     @Transactional(readOnly = true)
     public List<ProjetoSalvoResponse> listarMeusProjetos(Jwt jwt) {
         String email = extrairEmail(jwt);
         return clienteRepository.findFirstByEmailIgnoreCase(email)
-                .map(cliente -> projetoRepository.findAllByClienteIdWithDetails(cliente.getId()).stream()
-                        .map(p -> {
-                            BigDecimal valor = orcamentoRepository.findFirstByProjetoIdOrderByCriadoEmDesc(p.getId())
-                                    .map(Orcamento::getValorTotal)
-                                    .orElse(BigDecimal.ZERO);
-                            return toResponse(p, valor, p.getCompartimentos().size());
-                        })
-                        .toList())
+                .map(cliente -> {
+                    Map<UUID, Pedido> pedidosPorCompra = pedidoRepository.findAllByClienteIdWithEtapas(cliente.getId()).stream()
+                            .collect(Collectors.toMap(p -> p.getCompra().getId(), Function.identity(), (a, b) -> a));
+
+                    return projetoRepository.findAllByClienteIdWithDetails(cliente.getId()).stream()
+                            .map(p -> {
+                                BigDecimal valor = orcamentoRepository.findFirstByProjetoIdOrderByCriadoEmDesc(p.getId())
+                                        .map(Orcamento::getValorTotal)
+                                        .orElse(BigDecimal.ZERO);
+                                Pedido pedido = p.getCompra() != null ? pedidosPorCompra.get(p.getCompra().getId()) : null;
+                                return toResponse(p, valor, p.getCompartimentos().size(), pedido);
+                            })
+                            .toList();
+                })
                 .orElse(List.of());
     }
 
@@ -195,10 +206,17 @@ public class ProjetoService {
         return email;
     }
 
-    private ProjetoSalvoResponse toResponse(Projeto p, BigDecimal valorUnitario, int totalCompartimentos) {
+    private ProjetoSalvoResponse toResponse(Projeto p, BigDecimal valorUnitario, int totalCompartimentos, Pedido pedido) {
+        List<EtapaClienteDTO> historico = pedido == null ? List.of() : pedido.getEtapas().stream()
+                .map(pe -> new EtapaClienteDTO(pe.getNomeEtapa(), pe.getObservacao(), pe.getCriadoEm()))
+                .toList();
+
+        String etapaAtual = historico.isEmpty() ? null : historico.getLast().nomeEtapa();
+
         return new ProjetoSalvoResponse(
                 p.getId(),
                 p.getCompra() != null ? p.getCompra().getId() : null,
+                p.getCompra() != null ? p.getCompra().getStatus().name() : "FECHADA",
                 p.getLarguraMm(),
                 p.getProfundidadeMm(),
                 p.getAlturaMm(),
@@ -210,7 +228,11 @@ public class ProjetoService {
                 p.getTemplate() != null ? p.getTemplate().getNome() : "Personalizado por Objetos",
                 totalCompartimentos,
                 valorUnitario,
-                p.getCriadoEm()
+                p.getCriadoEm(),
+                etapaAtual,
+                pedido != null ? pedido.getCodigoRastreio() : null,
+                pedido != null ? pedido.getPrazoEstimadoDias() : null,
+                historico
         );
     }
 }

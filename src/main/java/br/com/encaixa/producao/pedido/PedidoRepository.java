@@ -4,6 +4,8 @@ import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.stereotype.Repository;
 
+import org.springframework.data.repository.query.Param;
+
 import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
@@ -21,4 +23,12 @@ public interface PedidoRepository extends JpaRepository<Pedido, UUID> {
             ORDER BY p.criadoEm DESC
             """)
     List<Pedido> findAllWithDetails();
+
+    @Query("""
+            SELECT DISTINCT p FROM Pedido p
+            JOIN FETCH p.compra c
+            LEFT JOIN FETCH p.etapas
+            WHERE c.cliente.id = :clienteId
+            """)
+    List<Pedido> findAllByClienteIdWithEtapas(@Param("clienteId") UUID clienteId);
 }
