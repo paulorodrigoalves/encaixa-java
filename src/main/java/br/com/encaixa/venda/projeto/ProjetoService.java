@@ -105,13 +105,22 @@ public class ProjetoService {
         var calculoPreco = new PricingEngine().calcular(entradaOrcamento, regraVigente);
 
         int qtd = req.quantidade() != null && req.quantidade() > 0 ? req.quantidade() : 1;
-        BigDecimal totalCompra = calculoPreco.valorTotal().multiply(BigDecimal.valueOf(qtd));
+        BigDecimal subtotalProjeto = calculoPreco.valorTotal().multiply(BigDecimal.valueOf(qtd));
 
-        Compra compra = new Compra();
-        compra.setCliente(cliente);
-        compra.setStatus(Compra.StatusCompra.FECHADA);
-        compra.setValorFrete(BigDecimal.ZERO);
-        compra.setValorTotal(totalCompra);
+        // Reutiliza a compra em andamento do cliente (status FECHADA e ainda sem transportadora fechada)
+        Compra compra = compraRepository.findAllByClienteIdOrderByCriadoEmDesc(cliente.getId()).stream()
+                .filter(c -> c.getStatus() == Compra.StatusCompra.FECHADA && c.getTransportadora() == null)
+                .findFirst()
+                .orElseGet(() -> {
+                    Compra nova = new Compra();
+                    nova.setCliente(cliente);
+                    nova.setStatus(Compra.StatusCompra.FECHADA);
+                    nova.setValorFrete(BigDecimal.ZERO);
+                    nova.setValorTotal(BigDecimal.ZERO);
+                    return nova;
+                });
+
+        compra.setValorTotal(compra.getValorTotal().add(subtotalProjeto));
         compra = compraRepository.save(compra);
 
         Projeto projeto = new Projeto();
@@ -130,7 +139,7 @@ public class ProjetoService {
         projeto.setEspessuraMaterialMm(material.getTipoMaterial().getEspessuraMm());
         projeto.setMargemSegurancaMm(material.getTipoMaterial().getMargemMm());
         projeto.setQuantidade(qtd);
-        projeto.setStatus(Projeto.StatusProjeto.FECHADO);
+        projeto.setStatus(Projeto.StatusProjeto.RASCUNHO);
 
         List<Compartimento> compartimentoEntities = resultadoEscala.compartimentos().stream().map(c -> {
             Compartimento comp = new Compartimento();
@@ -212,11 +221,12 @@ public class ProjetoService {
                 .toList();
 
         String etapaAtual = historico.isEmpty() ? null : historico.getLast().nomeEtapa();
+        Compra c = p.getCompra();
 
         return new ProjetoSalvoResponse(
                 p.getId(),
-                p.getCompra() != null ? p.getCompra().getId() : null,
-                p.getCompra() != null ? p.getCompra().getStatus().name() : "FECHADA",
+                c != null ? c.getId() : null,
+                c != null ? c.getStatus().name() : "FECHADA",
                 p.getLarguraMm(),
                 p.getProfundidadeMm(),
                 p.getAlturaMm(),
@@ -228,6 +238,9 @@ public class ProjetoService {
                 p.getTemplate() != null ? p.getTemplate().getNome() : "Personalizado por Objetos",
                 totalCompartimentos,
                 valorUnitario,
+                c != null ? c.getTransportadora() : null,
+                c != null ? c.getValorFrete() : BigDecimal.ZERO,
+                c != null ? c.getPrazoFreteDias() : null,
                 p.getCriadoEm(),
                 etapaAtual,
                 pedido != null ? pedido.getCodigoRastreio() : null,

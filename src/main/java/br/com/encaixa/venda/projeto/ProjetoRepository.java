@@ -16,11 +16,21 @@ public interface ProjetoRepository extends JpaRepository<Projeto, UUID> {
             JOIN FETCH p.material m
             JOIN FETCH m.tipoMaterial
             LEFT JOIN FETCH p.template
-            JOIN FETCH p.compra c
+            LEFT JOIN FETCH p.compra c
             WHERE c.cliente.id = :clienteId
             ORDER BY p.criadoEm DESC
             """)
     List<Projeto> findAllByClienteIdWithDetails(@Param("clienteId") UUID clienteId);
+
+    @Query("""
+            SELECT p FROM Projeto p
+            JOIN FETCH p.material m
+            JOIN FETCH m.tipoMaterial
+            LEFT JOIN FETCH p.template
+            WHERE p.compra IS NULL AND p.status = 'RASCUNHO'
+            ORDER BY p.criadoEm DESC
+            """)
+    List<Projeto> findAllRascunhosSemCompra();
 
     @Query("""
             SELECT DISTINCT p FROM Projeto p
