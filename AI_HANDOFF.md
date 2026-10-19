@@ -23,11 +23,11 @@ O motor principal (Layout Engine) calcula dinamicamente a geometria, gerando com
 ✅ **API de Catálogo (`CatalogoController`):** Busca materiais, templates e tipos de objetos pré-populados pelo `V2__seed_catalogo.sql`.
 ✅ **API de Layout e Orçamento (`LayoutController`):** Recebe medidas da gaveta e ID do material + `templateId` OU `itensObjeto`. Roda o motor geométrico (`EscalaTemplateEngine` ou `GeradorLayoutPorObjetos`) e de preços (`PricingEngine`), devolvendo o SVG (`DivisoriaRenderDTO` + `ObjetoPosicionadoDTO`) e orçamento detalhado.
 ✅ **API de Projetos Autenticada (`ProjetoController` / `ProjetoService`):** Endpoints `POST /api/projetos` e `GET /api/projetos` protegidos por JWT. Suporta salvar projetos tanto por template quanto personalizados por objetos (`projetos_origem_layout`).
-✅ **Painel Admin (`AdminController` / `AdminService`):** Endpoints `/api/admin/**` protegidos por `ROLE_ADMIN` (via `KeycloakRealmRoleConverter` no `SecurityConfig`). Permite publicar novas regras de precificação (`RegraPrecificacao`), listar compras, aprovar compra gerando `Pedido` e avançar etapas da esteira de produção (`PedidoEtapa`).
+✅ **Painel Admin (`AdminController` / `AdminService`):** Endpoints `/api/admin/**` protegidos por `ROLE_ADMIN` (via `KeycloakRealmRoleConverter` no `SecurityConfig`). Permite publicar novas regras de precificação (`RegraPrecificacao`), listar compras, aprovar compra gerando `Pedido`, avançar etapas da esteira de produção (`PedidoEtapa`) e gerar o **Plano de Corte para Marcenaria** (`GET /api/admin/compras/{compraId}/plano-corte`).
 
 ## 4. Próximos Passos (To-Do / Onde Paramos)
-1.  **Plano de Corte para Marcenaria:** Endpoint/relatório detalhando as peças de corte (descontos de espessura de MDF e revestimento de tecido) de cada `Projeto` do `Pedido`.
-2.  **Cálculo de Frete / Fechamento de Compra:** Integrar `EstimadorPacote` no fluxo de compra.
+1.  **Cálculo de Frete / Fechamento de Compra:** Integrar `EstimadorPacote` e cadastro de endereço de entrega no fluxo de compra.
+2.  **Gestão de Catálogo no Admin:** CRUD de Materiais, Templates e Tipos de Objeto.
 
 ## 5. Integrações Futuras / Backlog
 *   **Suporte ao Cliente & Notificações via WhatsApp (Gratuito):** Avaliar/utilizar o projeto [WA-AKG](https://github.com/mrifqidaffaaditya/WA-AKG) quando formos implementar a integração de suporte ao cliente e envio de atualizações das etapas do pedido via WhatsApp.
