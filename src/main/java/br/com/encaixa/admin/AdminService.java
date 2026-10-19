@@ -1,9 +1,12 @@
 package br.com.encaixa.admin;
 
 import br.com.encaixa.admin.AdminDtos.AtualizarRegraPrecoRequest;
+import br.com.encaixa.admin.AdminDtos.CompartimentoCorteDTO;
 import br.com.encaixa.admin.AdminDtos.CompraAdminDTO;
 import br.com.encaixa.admin.AdminDtos.EtapaProducaoDTO;
+import br.com.encaixa.admin.AdminDtos.PecaCorteDTO;
 import br.com.encaixa.admin.AdminDtos.PedidoEtapaHistoricoDTO;
+import br.com.encaixa.admin.AdminDtos.PlanoCorteProjetoDTO;
 import br.com.encaixa.admin.AdminDtos.RegistrarEtapaRequest;
 import br.com.encaixa.admin.AdminDtos.RegraPrecificacaoDTO;
 import br.com.encaixa.precificacao.RegraPrecificacao;
@@ -13,14 +16,20 @@ import br.com.encaixa.producao.etapa.EtapaProducaoRepository;
 import br.com.encaixa.producao.etapa.PedidoEtapa;
 import br.com.encaixa.producao.pedido.Pedido;
 import br.com.encaixa.producao.pedido.PedidoRepository;
+import br.com.encaixa.venda.compartimento.Compartimento;
 import br.com.encaixa.venda.compra.Compra;
 import br.com.encaixa.venda.compra.CompraRepository;
+import br.com.encaixa.venda.projeto.Projeto;
+import br.com.encaixa.venda.projeto.ProjetoRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.security.oauth2.jwt.Jwt;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.time.OffsetDateTime;
+import java.util.ArrayList;
+import java.util.Comparator;
+import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.UUID;
@@ -33,6 +42,7 @@ public class AdminService {
 
     private final RegraPrecificacaoRepository regraPrecificacaoRepository;
     private final CompraRepository compraRepository;
+    private final ProjetoRepository projetoRepository;
     private final PedidoRepository pedidoRepository;
     private final EtapaProducaoRepository etapaProducaoRepository;
 
@@ -161,5 +171,105 @@ public class AdminService {
         pedido.registrarEtapa(novaEtapa);
 
         pedidoRepository.save(pedido);
+    }
+
+    @Transactional(readOnly = true)
+    public List<PlanoCorteProjetoDTO> gerarPlanoCorteCompra(UUID compraId) {
+        List<Projeto> projetos = projetoRepository.findAllByCompraIdWithCompartimentos(compraId);
+        return projetos.stream().map(this::montarPlanoCorte).toList();
+    }
+
+    private PlanoCorteProjetoDTO montarPlanoCorte(Projeto p) {
+        int larguraUtil = p.getLarguraMm() - p.getMargemSegurancaMm();
+        int profundidadeUtil = p.getProfundidadeMm() - p.getMargemSegurancaMm();
+        int altura = p.getAlturaMm();
+        int esp = p.getEspessuraMaterialMm();
+
+        List<Compartimento> ordenados = p.getCompartimentos().stream()
+                .sorted(Comparator.comparingInt(Compartimento::getPosXMm)
+                        .thenComparingInt(Compartimento::getPosYMm))
+                .toList();
+
+        // Agrupa os compartimentos por coluna (mesmo posXMm)
+        Map<Integer, List<Compartimento>> colunas = new LinkedHashMap<>();
+        for (Compartimento c : ordenados) {
+            colunas.computeIfAbsent(c.getPosXMm(), k -> new ArrayList<>()).add(c);
+        }
+
+        int nColunas = Math.max(1, colunas.size());
+        int divisoriasVerticaisInternas = Math.max(0, nColunas - 1);
+        int compLateralInterno = Math.max(1, profundidadeUtil - 2 * esp);
+
+        List<PecaCorteDTO> pecas = new ArrayList<>();
+        // 1. Paredes externas frontais/traseiras (2 peças inteiras na largura útil)
+        pecas.add(new PecaCorteDTO(
+                "Parede Externa Frontal / Traseira",
+                2,
+                larguraUtil,
+                altura,
+                esp
+        ));
+        // 2. Paredes externas laterais esquerda/direita (encaixadas entre frontal e traseira)
+        pecas.add(new PecaCorteDTO(
+                "Parede Externa Lateral (Esq / Dir)",
+                2,
+                compLateralInterno,
+                altura,
+                esp
+        ));
+        // 3. Divisórias verticais internas (se houver mais de 1 coluna)
+        if (divisoriasVerticaisInternas > 0) {
+            pecas.add(new PecaCorteDTO(
+                    "Divisória Longitudinal Interna (Coluna)",
+                    divisoriasVerticaisInternas,
+                    compLateralInterno,
+                    altura,
+                    esp
+            ));
+        }
+        // 4. Divisórias horizontais internas de cada coluna (N subdivisões -> N-1 divisórias internas)
+        int idxColuna = 1;
+        for (List<Compartimento> itensColuna : colunas.values()) {
+            int nHorizontaisInternas = Math.max(0, itensColuna.size() - 1);
+            if (nHorizontaisInternas > 0) {
+                int larguraVaoColuna = itensColuna.getFirst().getLarguraMm();
+                pecas.add(new PecaCorteDTO(
+                        "Divisória Transversal Interna (Coluna " + idxColuna + ")",
+                        nHorizontaisInternas,
+                        larguraVaoColuna,
+                        altura,
+                        esp
+                ));
+            }
+            idxColuna++;
+        }
+
+        List<CompartimentoCorteDTO> listaCompartimentos = new ArrayList<>();
+        for (int i = 0; i < ordenados.size(); i++) {
+            Compartimento c = ordenados.get(i);
+            listaCompartimentos.add(new CompartimentoCorteDTO(
+                    i + 1,
+                    c.getPosXMm(),
+                    c.getPosYMm(),
+                    c.getLarguraMm(),
+                    c.getProfundidadeMm()
+            ));
+        }
+
+        return new PlanoCorteProjetoDTO(
+                p.getId(),
+                p.getMaterial().getNome(),
+                p.getMaterial().getTipoMaterial().getNome(),
+                p.getQuantidade(),
+                p.getLarguraMm(),
+                p.getProfundidadeMm(),
+                altura,
+                p.getMargemSegurancaMm(),
+                esp,
+                larguraUtil,
+                profundidadeUtil,
+                pecas,
+                listaCompartimentos
+        );
     }
 }

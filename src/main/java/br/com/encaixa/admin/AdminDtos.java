@@ -58,4 +58,36 @@ public final class AdminDtos {
             String observacao,
             String codigoRastreio
     ) {}
+
+    public record PecaCorteDTO(
+            String descricao,
+            int quantidade,
+            int comprimentoMm,
+            int alturaMm,
+            int espessuraMm
+    ) {}
+
+    public record CompartimentoCorteDTO(
+            int indice,
+            int posXMm,
+            int posYMm,
+            int larguraInternaMm,
+            int profundidadeInternaMm
+    ) {}
+
+    public record PlanoCorteProjetoDTO(
+            UUID projetoId,
+            String materialNome,
+            String tipoMaterialNome,
+            int quantidadeOrganizadores,
+            int larguraGavetaMm,
+            int profundidadeGavetaMm,
+            int alturaGavetaMm,
+            int margemSegurancaMm,
+            int espessuraMaterialMm,
+            int larguraExternaOrganizadorMm,
+            int profundidadeExternaOrganizadorMm,
+            List<PecaCorteDTO> pecasCorte,
+            List<CompartimentoCorteDTO> compartimentos
+    ) {}
 }

@@ -3,6 +3,7 @@ package br.com.encaixa.admin;
 import br.com.encaixa.admin.AdminDtos.AtualizarRegraPrecoRequest;
 import br.com.encaixa.admin.AdminDtos.CompraAdminDTO;
 import br.com.encaixa.admin.AdminDtos.EtapaProducaoDTO;
+import br.com.encaixa.admin.AdminDtos.PlanoCorteProjetoDTO;
 import br.com.encaixa.admin.AdminDtos.RegistrarEtapaRequest;
 import br.com.encaixa.admin.AdminDtos.RegraPrecificacaoDTO;
 import jakarta.validation.Valid;
@@ -48,6 +49,11 @@ public class AdminController {
     @GetMapping("/compras")
     public ResponseEntity<List<CompraAdminDTO>> listarComprasEPedidos() {
         return ResponseEntity.ok(adminService.listarComprasEPedidos());
+    }
+
+    @GetMapping("/compras/{compraId}/plano-corte")
+    public ResponseEntity<List<PlanoCorteProjetoDTO>> obterPlanoCorteCompra(@PathVariable UUID compraId) {
+        return ResponseEntity.ok(adminService.gerarPlanoCorteCompra(compraId));
     }
 
     @PostMapping("/compras/{compraId}/aprovar")
