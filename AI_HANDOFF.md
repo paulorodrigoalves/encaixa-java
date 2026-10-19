@@ -23,9 +23,10 @@ O motor principal (Layout Engine) calcula dinamicamente a geometria, gerando com
 ✅ **API de Catálogo (`CatalogoController`):** Busca materiais, templates e tipos de objetos pré-populados pelo `V2__seed_catalogo.sql`.
 ✅ **API de Layout e Orçamento (`LayoutController`):** Recebe medidas da gaveta e ID do material + `templateId` OU `itensObjeto`. Roda o motor geométrico (`EscalaTemplateEngine` ou `GeradorLayoutPorObjetos`) e de preços (`PricingEngine`), devolvendo o SVG (`DivisoriaRenderDTO` + `ObjetoPosicionadoDTO`) e orçamento detalhado.
 ✅ **API de Projetos Autenticada (`ProjetoController` / `ProjetoService`):** Endpoints `POST /api/projetos` e `GET /api/projetos` protegidos por JWT. Suporta salvar projetos tanto por template quanto personalizados por objetos (`projetos_origem_layout`).
+✅ **Painel Admin (`AdminController` / `AdminService`):** Endpoints `/api/admin/**` protegidos por `ROLE_ADMIN` (via `KeycloakRealmRoleConverter` no `SecurityConfig`). Permite publicar novas regras de precificação (`RegraPrecificacao`), listar compras, aprovar compra gerando `Pedido` e avançar etapas da esteira de produção (`PedidoEtapa`).
 
 ## 4. Próximos Passos (To-Do / Onde Paramos)
-1.  **Área Admin / Produção:** Endpoints protegidos por role `admin` para gerenciamento de catálogo (materiais, templates, regras de preço) e acompanhamento das etapas de produção (`Pedido` / `PedidoEtapa`).
+1.  **Plano de Corte para Marcenaria:** Endpoint/relatório detalhando as peças de corte (descontos de espessura de MDF e revestimento de tecido) de cada `Projeto` do `Pedido`.
 2.  **Cálculo de Frete / Fechamento de Compra:** Integrar `EstimadorPacote` no fluxo de compra.
 
 ## 5. Integrações Futuras / Backlog
