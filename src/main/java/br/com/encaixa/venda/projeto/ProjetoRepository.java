@@ -12,11 +12,12 @@ import java.util.UUID;
 public interface ProjetoRepository extends JpaRepository<Projeto, UUID> {
 
     @Query("""
-            SELECT p FROM Projeto p
+            SELECT DISTINCT p FROM Projeto p
             JOIN FETCH p.material m
             JOIN FETCH m.tipoMaterial
             LEFT JOIN FETCH p.template
             LEFT JOIN FETCH p.compra c
+            LEFT JOIN FETCH p.compartimentos
             WHERE c.cliente.id = :clienteId
             ORDER BY p.criadoEm DESC
             """)

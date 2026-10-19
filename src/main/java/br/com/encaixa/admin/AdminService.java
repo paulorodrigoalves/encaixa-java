@@ -61,6 +61,7 @@ public class AdminService {
     private final TipoMaterialRepository tipoMaterialRepository;
     private final MaterialRepository materialRepository;
     private final TipoObjetoRepository tipoObjetoRepository;
+    private final br.com.encaixa.notificacao.WhatsAppNotificacaoService whatsAppService;
 
     @Transactional(readOnly = true)
     public RegraPrecificacaoDTO obterRegraVigente() {
@@ -151,17 +152,29 @@ public class AdminService {
         pedido.setCompra(compra);
         pedido.setPrazoEstimadoDias(15);
 
+        String nomePrimeiraEtapa = "Recebido na Marcenaria";
+        String obsInicial = "Pagamento confirmado. Pedido enviado para produção.";
+
         List<EtapaProducao> etapas = etapaProducaoRepository.findAllByAtivoTrueOrderByOrdemAsc();
         if (!etapas.isEmpty()) {
             EtapaProducao primeira = etapas.getFirst();
+            nomePrimeiraEtapa = primeira.getNome();
             PedidoEtapa pe = new PedidoEtapa();
             pe.setEtapa(primeira);
-            pe.setNomeEtapa(primeira.getNome());
-            pe.setObservacao("Pagamento confirmado. Pedido enviado para produção.");
+            pe.setNomeEtapa(nomePrimeiraEtapa);
+            pe.setObservacao(obsInicial);
             pedido.registrarEtapa(pe);
         }
 
         pedidoRepository.save(pedido);
+
+        whatsAppService.notificarAtualizacaoPedido(
+                compra.getCliente().getNome(),
+                compra.getCliente().getTelefone(),
+                nomePrimeiraEtapa,
+                obsInicial,
+                null
+        );
     }
 
     @Transactional
@@ -187,6 +200,15 @@ public class AdminService {
         pedido.registrarEtapa(novaEtapa);
 
         pedidoRepository.save(pedido);
+
+        var cliente = pedido.getCompra().getCliente();
+        whatsAppService.notificarAtualizacaoPedido(
+                cliente.getNome(),
+                cliente.getTelefone(),
+                etapa.getNome(),
+                req.observacao(),
+                pedido.getCodigoRastreio()
+        );
     }
 
     @Transactional(readOnly = true)

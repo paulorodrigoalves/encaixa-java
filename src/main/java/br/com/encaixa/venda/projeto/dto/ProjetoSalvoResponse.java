@@ -1,5 +1,7 @@
 package br.com.encaixa.venda.projeto.dto;
 
+import br.com.encaixa.venda.layout.dto.PreviewLayoutResponse.DivisoriaRenderDTO;
+
 import java.math.BigDecimal;
 import java.time.OffsetDateTime;
 import java.util.List;
@@ -27,7 +29,8 @@ public record ProjetoSalvoResponse(
         String etapaAtual,
         String codigoRastreio,
         Integer prazoEstimadoDias,
-        List<EtapaClienteDTO> historicoEtapas
+        List<EtapaClienteDTO> historicoEtapas,
+        List<DivisoriaRenderDTO> divisorias
 ) {
     public record EtapaClienteDTO(
             String nomeEtapa,

@@ -223,6 +223,32 @@ public class ProjetoService {
         String etapaAtual = historico.isEmpty() ? null : historico.getLast().nomeEtapa();
         Compra c = p.getCompra();
 
+        int espessura = p.getEspessuraMaterialMm();
+        int larguraUtil = p.getLarguraMm() - p.getMargemSegurancaMm();
+        int profundidadeUtil = p.getProfundidadeMm() - p.getMargemSegurancaMm();
+
+        List< br.com.encaixa.venda.layout.dto.PreviewLayoutResponse.DivisoriaRenderDTO > divisorias = new java.util.ArrayList<>();
+        for (Compartimento comp : p.getCompartimentos()) {
+            if (comp.getPosXMm() + comp.getLarguraMm() + espessura < larguraUtil) {
+                divisorias.add(new br.com.encaixa.venda.layout.dto.PreviewLayoutResponse.DivisoriaRenderDTO(
+                        comp.getPosXMm() + comp.getLarguraMm(),
+                        comp.getPosYMm(),
+                        espessura,
+                        comp.getProfundidadeMm(),
+                        "VERTICAL"
+                ));
+            }
+            if (comp.getPosYMm() + comp.getProfundidadeMm() + espessura < profundidadeUtil) {
+                divisorias.add(new br.com.encaixa.venda.layout.dto.PreviewLayoutResponse.DivisoriaRenderDTO(
+                        comp.getPosXMm(),
+                        comp.getPosYMm() + comp.getProfundidadeMm(),
+                        comp.getLarguraMm(),
+                        espessura,
+                        "HORIZONTAL"
+                ));
+            }
+        }
+
         return new ProjetoSalvoResponse(
                 p.getId(),
                 c != null ? c.getId() : null,
@@ -245,7 +271,8 @@ public class ProjetoService {
                 etapaAtual,
                 pedido != null ? pedido.getCodigoRastreio() : null,
                 pedido != null ? pedido.getPrazoEstimadoDias() : null,
-                historico
+                historico,
+                divisorias
         );
     }
 }
