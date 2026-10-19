@@ -1,14 +1,27 @@
 package br.com.encaixa.admin;
 
 import br.com.encaixa.admin.AdminDtos.AtualizarRegraPrecoRequest;
+import br.com.encaixa.admin.AdminDtos.CatalogoAdminDTO;
 import br.com.encaixa.admin.AdminDtos.CompartimentoCorteDTO;
 import br.com.encaixa.admin.AdminDtos.CompraAdminDTO;
+import br.com.encaixa.admin.AdminDtos.CriarMaterialRequest;
+import br.com.encaixa.admin.AdminDtos.CriarTipoMaterialRequest;
+import br.com.encaixa.admin.AdminDtos.CriarTipoObjetoRequest;
 import br.com.encaixa.admin.AdminDtos.EtapaProducaoDTO;
+import br.com.encaixa.admin.AdminDtos.MaterialAdminDTO;
 import br.com.encaixa.admin.AdminDtos.PecaCorteDTO;
 import br.com.encaixa.admin.AdminDtos.PedidoEtapaHistoricoDTO;
 import br.com.encaixa.admin.AdminDtos.PlanoCorteProjetoDTO;
 import br.com.encaixa.admin.AdminDtos.RegistrarEtapaRequest;
 import br.com.encaixa.admin.AdminDtos.RegraPrecificacaoDTO;
+import br.com.encaixa.admin.AdminDtos.TipoMaterialAdminDTO;
+import br.com.encaixa.admin.AdminDtos.TipoObjetoAdminDTO;
+import br.com.encaixa.catalogo.material.Material;
+import br.com.encaixa.catalogo.material.MaterialRepository;
+import br.com.encaixa.catalogo.material.TipoMaterial;
+import br.com.encaixa.catalogo.material.TipoMaterialRepository;
+import br.com.encaixa.catalogo.tipoobjeto.TipoObjeto;
+import br.com.encaixa.catalogo.tipoobjeto.TipoObjetoRepository;
 import br.com.encaixa.precificacao.RegraPrecificacao;
 import br.com.encaixa.precificacao.RegraPrecificacaoRepository;
 import br.com.encaixa.producao.etapa.EtapaProducao;
@@ -45,6 +58,9 @@ public class AdminService {
     private final ProjetoRepository projetoRepository;
     private final PedidoRepository pedidoRepository;
     private final EtapaProducaoRepository etapaProducaoRepository;
+    private final TipoMaterialRepository tipoMaterialRepository;
+    private final MaterialRepository materialRepository;
+    private final TipoObjetoRepository tipoObjetoRepository;
 
     @Transactional(readOnly = true)
     public RegraPrecificacaoDTO obterRegraVigente() {
@@ -271,5 +287,96 @@ public class AdminService {
                 pecas,
                 listaCompartimentos
         );
+    }
+
+    @Transactional(readOnly = true)
+    public CatalogoAdminDTO obterCatalogoAdmin() {
+        var tiposMat = tipoMaterialRepository.findAllByOrderByNomeAsc().stream()
+                .map(tm -> new TipoMaterialAdminDTO(tm.getId(), tm.getNome(), tm.getEspessuraMm(), tm.getMargemMm(), tm.isAtivo()))
+                .toList();
+
+        var materiais = materialRepository.findAllWithTipoMaterial().stream()
+                .map(m -> new MaterialAdminDTO(
+                        m.getId(),
+                        m.getNome(),
+                        m.getCor(),
+                        m.getValorFixoAdicional(),
+                        m.getTipoMaterial().getId(),
+                        m.getTipoMaterial().getNome(),
+                        m.getTipoMaterial().getEspessuraMm(),
+                        m.getTipoMaterial().getMargemMm(),
+                        m.isAtivo()
+                ))
+                .toList();
+
+        var tiposObj = tipoObjetoRepository.findAll().stream()
+                .sorted(Comparator.comparing(TipoObjeto::getCategoria).thenComparing(TipoObjeto::getNome))
+                .map(to -> new TipoObjetoAdminDTO(
+                        to.getId(),
+                        to.getNome(),
+                        to.getCategoria(),
+                        to.getLarguraMinMm(),
+                        to.getLarguraMaxMm(),
+                        to.getProfundidadeMinMm(),
+                        to.getProfundidadeMaxMm(),
+                        to.getAlturaMinMm(),
+                        to.isAtivo()
+                ))
+                .toList();
+
+        return new CatalogoAdminDTO(tiposMat, materiais, tiposObj);
+    }
+
+    @Transactional
+    public void criarTipoMaterial(CriarTipoMaterialRequest req) {
+        TipoMaterial tm = new TipoMaterial();
+        tm.setNome(req.nome().trim());
+        tm.setEspessuraMm(req.espessuraMm());
+        tm.setMargemMm(req.margemMm());
+        tm.setAtivo(true);
+        tipoMaterialRepository.save(tm);
+    }
+
+    @Transactional
+    public void criarMaterial(CriarMaterialRequest req) {
+        TipoMaterial tm = tipoMaterialRepository.findById(req.tipoMaterialId())
+                .orElseThrow(() -> new IllegalArgumentException("Tipo de material não encontrado."));
+        Material m = new Material();
+        m.setNome(req.nome().trim());
+        m.setCor(req.cor().trim());
+        m.setValorFixoAdicional(req.valorFixoAdicional());
+        m.setTipoMaterial(tm);
+        m.setAtivo(true);
+        materialRepository.save(m);
+    }
+
+    @Transactional
+    public void alternarAtivoMaterial(UUID id) {
+        Material m = materialRepository.findById(id)
+                .orElseThrow(() -> new IllegalArgumentException("Material não encontrado."));
+        m.setAtivo(!m.isAtivo());
+        materialRepository.save(m);
+    }
+
+    @Transactional
+    public void criarTipoObjeto(CriarTipoObjetoRequest req) {
+        TipoObjeto to = new TipoObjeto();
+        to.setNome(req.nome().trim());
+        to.setCategoria(req.categoria().trim());
+        to.setLarguraMinMm(req.larguraMinMm());
+        to.setLarguraMaxMm(req.larguraMaxMm());
+        to.setProfundidadeMinMm(req.profundidadeMinMm());
+        to.setProfundidadeMaxMm(req.profundidadeMaxMm());
+        to.setAlturaMinMm(req.alturaMinMm());
+        to.setAtivo(true);
+        tipoObjetoRepository.save(to);
+    }
+
+    @Transactional
+    public void alternarAtivoTipoObjeto(UUID id) {
+        TipoObjeto to = tipoObjetoRepository.findById(id)
+                .orElseThrow(() -> new IllegalArgumentException("Tipo de objeto não encontrado."));
+        to.setAtivo(!to.isAtivo());
+        tipoObjetoRepository.save(to);
     }
 }

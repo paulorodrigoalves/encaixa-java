@@ -12,4 +12,7 @@ public interface MaterialRepository extends JpaRepository<Material, UUID> {
     
     @Query("SELECT m FROM Material m JOIN FETCH m.tipoMaterial WHERE m.ativo = true")
     List<Material> findAllAtivos();
+
+    @Query("SELECT m FROM Material m JOIN FETCH m.tipoMaterial ORDER BY m.nome ASC")
+    List<Material> findAllWithTipoMaterial();
 }

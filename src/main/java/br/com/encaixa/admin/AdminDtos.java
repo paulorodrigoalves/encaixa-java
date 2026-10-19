@@ -90,4 +90,65 @@ public final class AdminDtos {
             List<PecaCorteDTO> pecasCorte,
             List<CompartimentoCorteDTO> compartimentos
     ) {}
+
+    public record TipoMaterialAdminDTO(
+            UUID id,
+            String nome,
+            int espessuraMm,
+            int margemMm,
+            boolean ativo
+    ) {}
+
+    public record CriarTipoMaterialRequest(
+            @NotNull String nome,
+            int espessuraMm,
+            int margemMm
+    ) {}
+
+    public record MaterialAdminDTO(
+            UUID id,
+            String nome,
+            String cor,
+            BigDecimal valorFixoAdicional,
+            UUID tipoMaterialId,
+            String tipoMaterialNome,
+            int espessuraMm,
+            int margemMm,
+            boolean ativo
+    ) {}
+
+    public record CriarMaterialRequest(
+            @NotNull String nome,
+            @NotNull String cor,
+            @NotNull BigDecimal valorFixoAdicional,
+            @NotNull UUID tipoMaterialId
+    ) {}
+
+    public record TipoObjetoAdminDTO(
+            UUID id,
+            String nome,
+            String categoria,
+            int larguraMinMm,
+            int larguraMaxMm,
+            int profundidadeMinMm,
+            int profundidadeMaxMm,
+            Integer alturaMinMm,
+            boolean ativo
+    ) {}
+
+    public record CriarTipoObjetoRequest(
+            @NotNull String nome,
+            @NotNull String categoria,
+            int larguraMinMm,
+            int larguraMaxMm,
+            int profundidadeMinMm,
+            int profundidadeMaxMm,
+            Integer alturaMinMm
+    ) {}
+
+    public record CatalogoAdminDTO(
+            List<TipoMaterialAdminDTO> tiposMaterial,
+            List<MaterialAdminDTO> materiais,
+            List<TipoObjetoAdminDTO> tiposObjeto
+    ) {}
 }
