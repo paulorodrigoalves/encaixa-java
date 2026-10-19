@@ -21,12 +21,12 @@ O motor principal (Layout Engine) calcula dinamicamente a geometria, gerando com
 ✅ **Infraestrutura:** Docker Compose com PostgreSQL 15 e Keycloak (com import automático do realm `encaixa` e client `encaixa-frontend`).
 ✅ **Domínio e Testes:** Motor de geometria, motor de precificação e validação das entidades contra o Flyway usando Testcontainers (`PersistenciaSchemaTest.java`).
 ✅ **API de Catálogo (`CatalogoController`):** Busca materiais, templates e tipos de objetos pré-populados pelo `V2__seed_catalogo.sql`.
-✅ **API de Layout e Orçamento (`LayoutController`):** Recebe medidas da gaveta e ID do material/template. Roda o motor geométrico (`EscalaTemplateEngine`) e de preços (`PricingEngine`), devolvendo o SVG (`DivisoriaRenderDTO`) e orçamento detalhado.
-✅ **API de Projetos Autenticada (`ProjetoController` / `ProjetoService`):** Endpoints `POST /api/projetos` e `GET /api/projetos` protegidos por JWT. Resolve/cria o `Cliente` a partir do token do Keycloak, gera a `Compra`, salva o `Projeto` com seus `Compartimento`s e o snapshot de `Orcamento`.
+✅ **API de Layout e Orçamento (`LayoutController`):** Recebe medidas da gaveta e ID do material + `templateId` OU `itensObjeto`. Roda o motor geométrico (`EscalaTemplateEngine` ou `GeradorLayoutPorObjetos`) e de preços (`PricingEngine`), devolvendo o SVG (`DivisoriaRenderDTO` + `ObjetoPosicionadoDTO`) e orçamento detalhado.
+✅ **API de Projetos Autenticada (`ProjetoController` / `ProjetoService`):** Endpoints `POST /api/projetos` e `GET /api/projetos` protegidos por JWT. Suporta salvar projetos tanto por template quanto personalizados por objetos (`projetos_origem_layout`).
 
 ## 4. Próximos Passos (To-Do / Onde Paramos)
-1.  **Layout Dinâmico por Objetos:** Expor o `GeradorLayoutPorObjetos` no `LayoutService` e `ProjetoService` para permitir criar gavetas escolhendo objetos (em vez de apenas templates fixos).
-2.  **Área Admin / Produção:** Endpoints protegidos por role `admin` para gerenciamento de catálogo (materiais, templates, regras de preço) e acompanhamento das etapas de produção (`Pedido` / `PedidoEtapa`).
+1.  **Área Admin / Produção:** Endpoints protegidos por role `admin` para gerenciamento de catálogo (materiais, templates, regras de preço) e acompanhamento das etapas de produção (`Pedido` / `PedidoEtapa`).
+2.  **Cálculo de Frete / Fechamento de Compra:** Integrar `EstimadorPacote` no fluxo de compra.
 
 ## 5. Integrações Futuras / Backlog
 *   **Suporte ao Cliente & Notificações via WhatsApp (Gratuito):** Avaliar/utilizar o projeto [WA-AKG](https://github.com/mrifqidaffaaditya/WA-AKG) quando formos implementar a integração de suporte ao cliente e envio de atualizações das etapas do pedido via WhatsApp.

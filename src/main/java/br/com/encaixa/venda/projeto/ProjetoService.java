@@ -1,11 +1,17 @@
 package br.com.encaixa.venda.projeto;
 
 import br.com.encaixa.catalogo.material.MaterialRepository;
+import br.com.encaixa.catalogo.template.Template;
 import br.com.encaixa.catalogo.template.TemplateRepository;
+import br.com.encaixa.catalogo.tipoobjeto.TipoObjeto;
+import br.com.encaixa.catalogo.tipoobjeto.TipoObjetoRepository;
 import br.com.encaixa.domain.engine.EscalaTemplateEngine;
+import br.com.encaixa.domain.engine.GeradorLayoutPorObjetos;
 import br.com.encaixa.domain.engine.PricingEngine;
 import br.com.encaixa.domain.engine.model.Modelos.ConfigEscala;
 import br.com.encaixa.domain.engine.model.Modelos.MedidasGaveta;
+import br.com.encaixa.domain.engine.model.Modelos.ResultadoEscala;
+import br.com.encaixa.domain.engine.model.Modelos.TipoObjetoConstraint;
 import br.com.encaixa.precificacao.Orcamento;
 import br.com.encaixa.precificacao.OrcamentoRepository;
 import br.com.encaixa.precificacao.RegraPrecificacaoRepository;
@@ -34,6 +40,7 @@ public class ProjetoService {
     private final OrcamentoRepository orcamentoRepository;
     private final MaterialRepository materialRepository;
     private final TemplateRepository templateRepository;
+    private final TipoObjetoRepository tipoObjetoRepository;
     private final RegraPrecificacaoRepository regraPrecificacaoRepository;
 
     @Transactional
@@ -42,8 +49,6 @@ public class ProjetoService {
 
         var material = materialRepository.findById(req.materialId())
                 .orElseThrow(() -> new IllegalArgumentException("Material inválido"));
-        var template = templateRepository.findById(req.templateId())
-                .orElseThrow(() -> new IllegalArgumentException("Template inválido"));
         var regraEntity = regraPrecificacaoRepository.findVigente()
                 .orElseThrow(() -> new IllegalStateException("Nenhuma regra de precificação vigente."));
 
@@ -53,7 +58,30 @@ public class ProjetoService {
         );
         var medidas = new MedidasGaveta(req.larguraMm(), req.profundidadeMm(), req.alturaMm());
 
-        var resultadoEscala = new EscalaTemplateEngine().escalar(template.getLayoutProporcional(), medidas, config);
+        Template template = null;
+        ResultadoEscala resultadoEscala;
+
+        if (req.templateId() != null) {
+            template = templateRepository.findById(req.templateId())
+                    .orElseThrow(() -> new IllegalArgumentException("Template inválido"));
+            resultadoEscala = new EscalaTemplateEngine().escalar(template.getLayoutProporcional(), medidas, config);
+        } else if (req.itensObjeto() != null && !req.itensObjeto().isEmpty()) {
+            List<TipoObjeto> catalogoTipos = tipoObjetoRepository.findAllByAtivoTrue();
+            List<TipoObjetoConstraint> constraints = catalogoTipos.stream()
+                    .map(t -> new TipoObjetoConstraint(
+                            t.getId(),
+                            t.getNome(),
+                            t.getLarguraMinMm(),
+                            t.getLarguraMaxMm(),
+                            t.getProfundidadeMinMm(),
+                            t.getProfundidadeMaxMm(),
+                            t.getAlturaMinMm()
+                    ))
+                    .toList();
+            resultadoEscala = new GeradorLayoutPorObjetos().gerar(medidas, req.itensObjeto(), constraints, config);
+        } else {
+            throw new IllegalArgumentException("Informe um templateId ou itensObjeto para salvar o projeto.");
+        }
 
         var regraVigente = new PricingEngine.RegraVigente(
                 regraEntity.getId(),
@@ -79,10 +107,16 @@ public class ProjetoService {
         compra.setValorTotal(totalCompra);
         compra = compraRepository.save(compra);
 
-        // Cria o Projeto e seus Compartimentos
+        // Cria o Projeto e seus Compartimentos (respeitando constraint projetos_origem_layout)
         Projeto projeto = new Projeto();
         projeto.setCompra(compra);
-        projeto.setTemplate(template);
+        if (template != null) {
+            projeto.setTemplate(template);
+            projeto.setItensObjeto(null);
+        } else {
+            projeto.setTemplate(null);
+            projeto.setItensObjeto(req.itensObjeto());
+        }
         projeto.setMaterial(material);
         projeto.setLarguraMm(req.larguraMm());
         projeto.setProfundidadeMm(req.profundidadeMm());
@@ -173,7 +207,7 @@ public class ProjetoService {
                 p.getQuantidade(),
                 p.getStatus().name(),
                 p.getMaterial().getNome(),
-                p.getTemplate() != null ? p.getTemplate().getNome() : "Personalizado",
+                p.getTemplate() != null ? p.getTemplate().getNome() : "Personalizado por Objetos",
                 totalCompartimentos,
                 valorUnitario,
                 p.getCriadoEm()
