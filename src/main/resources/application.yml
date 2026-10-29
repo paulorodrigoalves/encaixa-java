@@ -32,3 +32,11 @@ logging:
   level:
     br.com.encaixa: DEBUG
     org.hibernate.SQL: DEBUG
+
+encaixa:
+  mercadopago:
+    # Token de TESTE/PRODUCAO do Mercado Pago (Credenciais). Nunca commitar o valor real.
+    access-token: ${MERCADOPAGO_ACCESS_TOKEN:}
+    # URL publica (ex: ngrok) para o webhook: https://SEU-HOST/api/public/pagamentos/webhook
+    notification-url: ${MERCADOPAGO_NOTIFICATION_URL:}
+    webhook-secret: ${MERCADOPAGO_WEBHOOK_SECRET:}

@@ -26,9 +26,11 @@ O motor principal (Layout Engine) calcula dinamicamente a geometria, gerando com
 ✅ **Painel Admin (`AdminController` / `AdminService`):** Endpoints `/api/admin/**` protegidos por `ROLE_ADMIN`. Permite publicar novas regras de precificação (`RegraPrecificacao`), gerenciar o Catálogo (`TipoMaterial`, `Material` e `TipoObjeto` com ativação/desativação), listar compras, aprovar compra gerando `Pedido`, avançar etapas da esteira de produção (`PedidoEtapa`) e gerar o **Plano de Corte para Marcenaria** (`GET /api/admin/compras/{compraId}/plano-corte`).
 ✅ **Carrinho, Estimador de Pacote e Frete (`CheckoutController` / `CheckoutService`):** Integra `EstimadorPacote` para calcular dimensões e peso da caixa (`GET /api/compras/{id}/cotacao-frete`) e fechar o endereço de entrega e transportadora (`POST /api/compras/{id}/checkout`).
 
+✅ **Pagamento PIX (Mercado Pago) (r.com.encaixa.pagamento):** POST /api/compras/{id}/pagamento/pix gera o QR/copia-e-cola, GET /api/compras/{id}/pagamento consulta/sincroniza, POST /api/public/pagamentos/webhook (público, valida x-signature se MERCADOPAGO_WEBHOOK_SECRET). Pagamento aprovado chama AdminService.aprovarCompraGerarPedido (idempotente). Tabela pagamentos criada em V3__pagamentos.sql. Config por env: MERCADOPAGO_ACCESS_TOKEN, MERCADOPAGO_NOTIFICATION_URL (URL pública, ex. ngrok), MERCADOPAGO_WEBHOOK_SECRET. Sem webhook público, o frontend faz polling a cada 5s.
+
 ## 4. Próximos Passos (To-Do / Onde Paramos)
 1.  **Notificações de Produção via WhatsApp:** Integrar disparo automático de mensagens ao avançar etapas de pedido.
-2.  **Gateway de Pagamento (PIX / Cartão):** Integrar webhook de confirmação automática de pagamento.
+2.  **Pagamento com cartão / frete real (Melhor Envio):** PIX já pronto; falta cartão e integrar frete real.
 
 ## 5. Integrações Futuras / Backlog
 *   **Suporte ao Cliente & Notificações via WhatsApp (Gratuito):** Avaliar/utilizar o projeto [WA-AKG](https://github.com/mrifqidaffaaditya/WA-AKG) quando formos implementar a integração de suporte ao cliente e envio de atualizações das etapas do pedido via WhatsApp.
