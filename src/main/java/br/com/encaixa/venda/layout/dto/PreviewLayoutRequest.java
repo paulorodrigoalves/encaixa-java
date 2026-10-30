@@ -14,5 +14,7 @@ public record PreviewLayoutRequest(
         @NotNull @Min(30) @Max(300) Integer alturaMm,
         @NotNull UUID materialId,
         UUID templateId,
-        List<ItemObjetoSelecionado> itensObjeto
+        List<ItemObjetoSelecionado> itensObjeto,
+        /** AUTO (padrao), COLUNAS, LINHAS, COLUNAS_GIRADO ou LINHAS_GIRADO. So vale no modo por objetos. */
+        String estrategiaLayout
 ) {}

@@ -10,10 +10,14 @@ public record PreviewLayoutResponse(
         List<DivisoriaRenderDTO> divisorias,
         List<ObjetoPosicionadoDTO> objetosPosicionados,
         int espessuraDivisoriaMm,
-        OrcamentoPreviewDTO orcamento
+        OrcamentoPreviewDTO orcamento,
+        String estrategiaUsada,
+        List<AlternativaLayoutDTO> alternativas
 ) {
     public record DivisoriaRenderDTO(int xMm, int yMm, int larguraMm, int profundidadeMm, String orientacao) {}
-    public record ObjetoPosicionadoDTO(ObjetoRenderDTO objeto, int xMm, int yMm, int larguraRealMm, int profundidadeRealMm) {}
+    public record ObjetoPosicionadoDTO(ObjetoRenderDTO objeto, int xMm, int yMm, int larguraRealMm, int profundidadeRealMm,
+                                       boolean girado, int folgaLarguraMm, int folgaProfundidadeMm) {}
+    public record AlternativaLayoutDTO(String id, String rotulo) {}
     public record ObjetoRenderDTO(String id, String nome, String corHex) {}
     
     public record OrcamentoPreviewDTO(

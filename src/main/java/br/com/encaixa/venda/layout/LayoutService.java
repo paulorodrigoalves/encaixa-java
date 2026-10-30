@@ -5,6 +5,9 @@ import br.com.encaixa.catalogo.template.TemplateRepository;
 import br.com.encaixa.catalogo.tipoobjeto.TipoObjeto;
 import br.com.encaixa.catalogo.tipoobjeto.TipoObjetoRepository;
 import br.com.encaixa.domain.engine.EscalaTemplateEngine;
+import br.com.encaixa.domain.engine.EstrategiaLayout;
+import br.com.encaixa.domain.engine.ResultadoLayoutObjetos.ObjetoColocado;
+import br.com.encaixa.venda.layout.dto.PreviewLayoutResponse.AlternativaLayoutDTO;
 import br.com.encaixa.domain.engine.GeradorLayoutPorObjetos;
 import br.com.encaixa.domain.engine.PricingEngine;
 import br.com.encaixa.domain.engine.model.Modelos.Compartimento;
@@ -60,6 +63,8 @@ public class LayoutService {
 
         ResultadoEscala resultado;
         List<ObjetoPosicionadoDTO> objetosPosicionados = new ArrayList<>();
+        String estrategiaUsada = null;
+        List<AlternativaLayoutDTO> alternativas = new ArrayList<>();
 
         if (req.templateId() != null) {
             var template = templateRepository.findById(req.templateId())
@@ -79,8 +84,15 @@ public class LayoutService {
                     ))
                     .toList();
 
-            resultado = new GeradorLayoutPorObjetos().gerar(medidas, req.itensObjeto(), constraints, config);
-            objetosPosicionados = montarObjetosPosicionados(req.itensObjeto(), constraints, resultado.compartimentos());
+            var gerador = new GeradorLayoutPorObjetos();
+            var detalhado = gerador.gerarDetalhado(medidas, req.itensObjeto(), constraints, config,
+                    EstrategiaLayout.de(req.estrategiaLayout()));
+            resultado = detalhado.escala();
+            estrategiaUsada = detalhado.estrategia().name();
+            objetosPosicionados = montarObjetosPosicionados(detalhado.objetos());
+            for (EstrategiaLayout e : gerador.estrategiasViaveis(medidas, req.itensObjeto(), constraints, config)) {
+                alternativas.add(new AlternativaLayoutDTO(e.name(), e.rotulo()));
+            }
         } else {
             throw new IllegalArgumentException("Informe um templateId ou uma lista de itensObjeto.");
         }
@@ -135,42 +147,28 @@ public class LayoutService {
                 divisorias,
                 objetosPosicionados,
                 espessura,
-                orcamentoDto
+                orcamentoDto,
+                estrategiaUsada,
+                alternativas
         );
     }
 
-    private List<ObjetoPosicionadoDTO> montarObjetosPosicionados(
-            List<ItemObjetoSelecionado> itensSelecionados,
-            List<TipoObjetoConstraint> catalogo,
-            List<Compartimento> compartimentos
-    ) {
-        Map<UUID, TipoObjetoConstraint> mapa = catalogo.stream()
-                .collect(Collectors.toMap(TipoObjetoConstraint::id, Function.identity(), (a, b) -> a));
-
-        List<TipoObjetoConstraint> unidades = new ArrayList<>();
-        for (ItemObjetoSelecionado item : itensSelecionados) {
-            if (item.quantidade() <= 0) continue;
-            TipoObjetoConstraint tipo = mapa.get(item.tipoObjetoId());
-            if (tipo != null) {
-                for (int i = 0; i < item.quantidade(); i++) {
-                    unidades.add(tipo);
-                }
-            }
-        }
-        unidades.sort(Comparator.comparingInt(TipoObjetoConstraint::larguraMinMm).reversed());
-
+    private List<ObjetoPosicionadoDTO> montarObjetosPosicionados(List<ObjetoColocado> colocados) {
         List<ObjetoPosicionadoDTO> resultado = new ArrayList<>();
-        int limite = Math.min(unidades.size(), compartimentos.size());
-        for (int i = 0; i < limite; i++) {
-            TipoObjetoConstraint u = unidades.get(i);
-            Compartimento c = compartimentos.get(i);
+        for (int i = 0; i < colocados.size(); i++) {
+            ObjetoColocado o = colocados.get(i);
+            TipoObjetoConstraint u = o.tipo();
+            Compartimento c = o.compartimento();
             String cor = CORES_PALETA[Math.abs(u.id().hashCode()) % CORES_PALETA.length];
             resultado.add(new ObjetoPosicionadoDTO(
                     new ObjetoRenderDTO(u.id() + "-" + i, u.nome(), cor),
                     c.posXMm(),
                     c.posYMm(),
                     c.larguraMm(),
-                    c.profundidadeMm()
+                    c.profundidadeMm(),
+                    o.girado(),
+                    o.folgaLarguraMm(),
+                    o.folgaProfundidadeMm()
             ));
         }
         return resultado;

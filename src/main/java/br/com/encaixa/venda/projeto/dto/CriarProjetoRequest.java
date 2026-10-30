@@ -15,5 +15,6 @@ public record CriarProjetoRequest(
         @NotNull UUID materialId,
         UUID templateId,
         List<ItemObjetoSelecionado> itensObjeto,
-        Integer quantidade
+        Integer quantidade,
+        String estrategiaLayout
 ) {}

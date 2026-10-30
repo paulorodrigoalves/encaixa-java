@@ -86,7 +86,8 @@ public class ProjetoService {
                             t.getAlturaMinMm()
                     ))
                     .toList();
-            resultadoEscala = new GeradorLayoutPorObjetos().gerar(medidas, req.itensObjeto(), constraints, config);
+            resultadoEscala = new GeradorLayoutPorObjetos().gerarDetalhado(medidas, req.itensObjeto(), constraints, config,
+                    br.com.encaixa.domain.engine.EstrategiaLayout.de(req.estrategiaLayout())).escala();
         } else {
             throw new IllegalArgumentException("Informe um templateId ou itensObjeto para salvar o projeto.");
         }
