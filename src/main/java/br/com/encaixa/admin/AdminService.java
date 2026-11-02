@@ -20,6 +20,8 @@ import br.com.encaixa.admin.AdminDtos.RegraPrecificacaoDTO;
 import br.com.encaixa.admin.AdminDtos.TipoMaterialAdminDTO;
 import br.com.encaixa.admin.AdminDtos.TipoObjetoAdminDTO;
 import br.com.encaixa.catalogo.material.Material;
+import br.com.encaixa.catalogo.material.MaterialFoto;
+import br.com.encaixa.catalogo.material.MaterialFotoRepository;
 import br.com.encaixa.catalogo.material.MaterialRepository;
 import br.com.encaixa.catalogo.material.TipoMaterial;
 import br.com.encaixa.catalogo.material.TipoMaterialRepository;
@@ -64,6 +66,7 @@ public class AdminService {
     private final EtapaProducaoRepository etapaProducaoRepository;
     private final TipoMaterialRepository tipoMaterialRepository;
     private final MaterialRepository materialRepository;
+    private final MaterialFotoRepository materialFotoRepository;
     private final TipoObjetoRepository tipoObjetoRepository;
     private final br.com.encaixa.notificacao.WhatsAppNotificacaoService whatsAppService;
 
@@ -335,18 +338,24 @@ public class AdminService {
                 .toList();
 
         var materiais = materialRepository.findAllWithTipoMaterial().stream()
-                .map(m -> new MaterialAdminDTO(
-                        m.getId(),
-                        m.getNome(),
-                        m.getCor(),
-                        m.getValorFixoAdicional(),
-                        m.getTipoMaterial().getId(),
-                        m.getTipoMaterial().getNome(),
-                        m.getTipoMaterial().getEspessuraMm(),
-                        m.getTipoMaterial().getMargemMm(),
-                        m.isAtivo(),
-                        contagemMaterial.getOrDefault(m.getId(), 0L).intValue()
-                ))
+                .map(m -> {
+                    String foto = (m.getFotos() != null && !m.getFotos().isEmpty())
+                            ? m.getFotos().getFirst().getFotoUrl()
+                            : null;
+                    return new MaterialAdminDTO(
+                            m.getId(),
+                            m.getNome(),
+                            m.getCor(),
+                            m.getValorFixoAdicional(),
+                            m.getTipoMaterial().getId(),
+                            m.getTipoMaterial().getNome(),
+                            m.getTipoMaterial().getEspessuraMm(),
+                            m.getTipoMaterial().getMargemMm(),
+                            m.isAtivo(),
+                            contagemMaterial.getOrDefault(m.getId(), 0L).intValue(),
+                            foto
+                    );
+                })
                 .toList();
 
         var tiposObj = tipoObjetoRepository.findAll().stream()
@@ -479,7 +488,15 @@ public class AdminService {
         m.setValorFixoAdicional(req.valorFixoAdicional());
         m.setTipoMaterial(tm);
         m.setAtivo(true);
-        materialRepository.save(m);
+        Material materialSalvo = materialRepository.save(m);
+
+        if (req.fotoUrl() != null && !req.fotoUrl().isBlank()) {
+            MaterialFoto foto = new MaterialFoto();
+            foto.setMaterial(materialSalvo);
+            foto.setFotoUrl(req.fotoUrl().trim());
+            foto.setOrdem(1);
+            materialFotoRepository.save(foto);
+        }
     }
 
     @Transactional
@@ -506,7 +523,21 @@ public class AdminService {
         m.setCor(req.cor().trim());
         m.setValorFixoAdicional(req.valorFixoAdicional());
         m.setTipoMaterial(tm);
-        materialRepository.save(m);
+        Material materialSalvo = materialRepository.save(m);
+
+        if (req.fotoUrl() != null && !req.fotoUrl().isBlank()) {
+            var fotoOpt = materialFotoRepository.findFirstByMaterialIdOrderByOrdemAsc(id);
+            MaterialFoto foto = fotoOpt.orElseGet(() -> {
+                MaterialFoto nova = new MaterialFoto();
+                nova.setMaterial(materialSalvo);
+                nova.setOrdem(1);
+                return nova;
+            });
+            foto.setFotoUrl(req.fotoUrl().trim());
+            materialFotoRepository.save(foto);
+        } else if (req.fotoUrl() != null && req.fotoUrl().isBlank()) {
+            materialFotoRepository.deleteAllByMaterialId(id);
+        }
     }
 
     @Transactional

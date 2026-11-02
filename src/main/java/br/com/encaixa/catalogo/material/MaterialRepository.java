@@ -10,9 +10,9 @@ import java.util.UUID;
 @Repository
 public interface MaterialRepository extends JpaRepository<Material, UUID> {
     
-    @Query("SELECT m FROM Material m JOIN FETCH m.tipoMaterial WHERE m.ativo = true")
+    @Query("SELECT DISTINCT m FROM Material m JOIN FETCH m.tipoMaterial LEFT JOIN FETCH m.fotos WHERE m.ativo = true ORDER BY m.nome ASC")
     List<Material> findAllAtivos();
 
-    @Query("SELECT m FROM Material m JOIN FETCH m.tipoMaterial ORDER BY m.nome ASC")
+    @Query("SELECT DISTINCT m FROM Material m JOIN FETCH m.tipoMaterial LEFT JOIN FETCH m.fotos ORDER BY m.nome ASC")
     List<Material> findAllWithTipoMaterial();
 }

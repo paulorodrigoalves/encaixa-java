@@ -122,21 +122,24 @@ public final class AdminDtos {
             int espessuraMm,
             int margemMm,
             boolean ativo,
-            int pedidosEmProducao
+            int pedidosEmProducao,
+            String fotoUrl
     ) {}
 
     public record CriarMaterialRequest(
             @NotNull String nome,
             @NotNull String cor,
             @NotNull BigDecimal valorFixoAdicional,
-            @NotNull UUID tipoMaterialId
+            @NotNull UUID tipoMaterialId,
+            String fotoUrl
     ) {}
 
     public record AtualizarMaterialRequest(
             @NotNull String nome,
             @NotNull String cor,
             @NotNull BigDecimal valorFixoAdicional,
-            @NotNull UUID tipoMaterialId
+            @NotNull UUID tipoMaterialId,
+            String fotoUrl
     ) {}
 
     public record TipoObjetoAdminDTO(

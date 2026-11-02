@@ -13,9 +13,14 @@ public record MaterialDTO(
         UUID tipoMaterialId,
         String tipoMaterialNome,
         int espessuraMm,
-        int margemMm
+        int margemMm,
+        String fotoUrl
 ) {
     public static MaterialDTO from(Material m) {
+        String foto = (m.getFotos() != null && !m.getFotos().isEmpty())
+                ? m.getFotos().getFirst().getFotoUrl()
+                : null;
+
         return new MaterialDTO(
                 m.getId(),
                 m.getNome(),
@@ -24,7 +29,8 @@ public record MaterialDTO(
                 m.getTipoMaterial().getId(),
                 m.getTipoMaterial().getNome(),
                 m.getTipoMaterial().getEspessuraMm(),
-                m.getTipoMaterial().getMargemMm()
+                m.getTipoMaterial().getMargemMm(),
+                foto
         );
     }
 }
