@@ -1,6 +1,9 @@
 package br.com.encaixa.admin;
 
+import br.com.encaixa.admin.AdminDtos.AtualizarMaterialRequest;
 import br.com.encaixa.admin.AdminDtos.AtualizarRegraPrecoRequest;
+import br.com.encaixa.admin.AdminDtos.AtualizarTipoMaterialRequest;
+import br.com.encaixa.admin.AdminDtos.AtualizarTipoObjetoRequest;
 import br.com.encaixa.admin.AdminDtos.CatalogoAdminDTO;
 import br.com.encaixa.admin.AdminDtos.CompartimentoCorteDTO;
 import br.com.encaixa.admin.AdminDtos.CompraAdminDTO;
@@ -360,6 +363,24 @@ public class AdminService {
     }
 
     @Transactional
+    public void atualizarTipoMaterial(UUID id, AtualizarTipoMaterialRequest req) {
+        TipoMaterial tm = tipoMaterialRepository.findById(id)
+                .orElseThrow(() -> new IllegalArgumentException("Tipo de material não encontrado."));
+        tm.setNome(req.nome().trim());
+        tm.setEspessuraMm(req.espessuraMm());
+        tm.setMargemMm(req.margemMm());
+        tipoMaterialRepository.save(tm);
+    }
+
+    @Transactional
+    public void alternarAtivoTipoMaterial(UUID id) {
+        TipoMaterial tm = tipoMaterialRepository.findById(id)
+                .orElseThrow(() -> new IllegalArgumentException("Tipo de material não encontrado."));
+        tm.setAtivo(!tm.isAtivo());
+        tipoMaterialRepository.save(tm);
+    }
+
+    @Transactional
     public void criarMaterial(CriarMaterialRequest req) {
         TipoMaterial tm = tipoMaterialRepository.findById(req.tipoMaterialId())
                 .orElseThrow(() -> new IllegalArgumentException("Tipo de material não encontrado."));
@@ -369,6 +390,19 @@ public class AdminService {
         m.setValorFixoAdicional(req.valorFixoAdicional());
         m.setTipoMaterial(tm);
         m.setAtivo(true);
+        materialRepository.save(m);
+    }
+
+    @Transactional
+    public void atualizarMaterial(UUID id, AtualizarMaterialRequest req) {
+        Material m = materialRepository.findById(id)
+                .orElseThrow(() -> new IllegalArgumentException("Material não encontrado."));
+        TipoMaterial tm = tipoMaterialRepository.findById(req.tipoMaterialId())
+                .orElseThrow(() -> new IllegalArgumentException("Tipo de material não encontrado."));
+        m.setNome(req.nome().trim());
+        m.setCor(req.cor().trim());
+        m.setValorFixoAdicional(req.valorFixoAdicional());
+        m.setTipoMaterial(tm);
         materialRepository.save(m);
     }
 
@@ -391,6 +425,20 @@ public class AdminService {
         to.setProfundidadeMaxMm(req.profundidadeMaxMm());
         to.setAlturaMinMm(req.alturaMinMm());
         to.setAtivo(true);
+        tipoObjetoRepository.save(to);
+    }
+
+    @Transactional
+    public void atualizarTipoObjeto(UUID id, AtualizarTipoObjetoRequest req) {
+        TipoObjeto to = tipoObjetoRepository.findById(id)
+                .orElseThrow(() -> new IllegalArgumentException("Tipo de objeto não encontrado."));
+        to.setNome(req.nome().trim());
+        to.setCategoria(req.categoria().trim());
+        to.setLarguraMinMm(req.larguraMinMm());
+        to.setLarguraMaxMm(req.larguraMaxMm());
+        to.setProfundidadeMinMm(req.profundidadeMinMm());
+        to.setProfundidadeMaxMm(req.profundidadeMaxMm());
+        to.setAlturaMinMm(req.alturaMinMm());
         tipoObjetoRepository.save(to);
     }
 

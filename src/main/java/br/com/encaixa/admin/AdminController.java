@@ -1,6 +1,9 @@
 package br.com.encaixa.admin;
 
+import br.com.encaixa.admin.AdminDtos.AtualizarMaterialRequest;
 import br.com.encaixa.admin.AdminDtos.AtualizarRegraPrecoRequest;
+import br.com.encaixa.admin.AdminDtos.AtualizarTipoMaterialRequest;
+import br.com.encaixa.admin.AdminDtos.AtualizarTipoObjetoRequest;
 import br.com.encaixa.admin.AdminDtos.CatalogoAdminDTO;
 import br.com.encaixa.admin.AdminDtos.CompraAdminDTO;
 import br.com.encaixa.admin.AdminDtos.CriarMaterialRequest;
@@ -19,6 +22,7 @@ import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PatchMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.PutMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
@@ -87,9 +91,33 @@ public class AdminController {
         return ResponseEntity.ok().build();
     }
 
+    @PutMapping("/catalogo/tipos-material/{id}")
+    public ResponseEntity<Void> atualizarTipoMaterial(
+            @PathVariable UUID id,
+            @RequestBody @Valid AtualizarTipoMaterialRequest req
+    ) {
+        adminService.atualizarTipoMaterial(id, req);
+        return ResponseEntity.ok().build();
+    }
+
+    @PatchMapping("/catalogo/tipos-material/{id}/toggle-ativo")
+    public ResponseEntity<Void> alternarAtivoTipoMaterial(@PathVariable UUID id) {
+        adminService.alternarAtivoTipoMaterial(id);
+        return ResponseEntity.ok().build();
+    }
+
     @PostMapping("/catalogo/materiais")
     public ResponseEntity<Void> criarMaterial(@RequestBody @Valid CriarMaterialRequest req) {
         adminService.criarMaterial(req);
+        return ResponseEntity.ok().build();
+    }
+
+    @PutMapping("/catalogo/materiais/{id}")
+    public ResponseEntity<Void> atualizarMaterial(
+            @PathVariable UUID id,
+            @RequestBody @Valid AtualizarMaterialRequest req
+    ) {
+        adminService.atualizarMaterial(id, req);
         return ResponseEntity.ok().build();
     }
 
@@ -102,6 +130,15 @@ public class AdminController {
     @PostMapping("/catalogo/tipos-objeto")
     public ResponseEntity<Void> criarTipoObjeto(@RequestBody @Valid CriarTipoObjetoRequest req) {
         adminService.criarTipoObjeto(req);
+        return ResponseEntity.ok().build();
+    }
+
+    @PutMapping("/catalogo/tipos-objeto/{id}")
+    public ResponseEntity<Void> atualizarTipoObjeto(
+            @PathVariable UUID id,
+            @RequestBody @Valid AtualizarTipoObjetoRequest req
+    ) {
+        adminService.atualizarTipoObjeto(id, req);
         return ResponseEntity.ok().build();
     }
 

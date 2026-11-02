@@ -105,6 +105,12 @@ public final class AdminDtos {
             int margemMm
     ) {}
 
+    public record AtualizarTipoMaterialRequest(
+            @NotNull String nome,
+            int espessuraMm,
+            int margemMm
+    ) {}
+
     public record MaterialAdminDTO(
             UUID id,
             String nome,
@@ -124,6 +130,13 @@ public final class AdminDtos {
             @NotNull UUID tipoMaterialId
     ) {}
 
+    public record AtualizarMaterialRequest(
+            @NotNull String nome,
+            @NotNull String cor,
+            @NotNull BigDecimal valorFixoAdicional,
+            @NotNull UUID tipoMaterialId
+    ) {}
+
     public record TipoObjetoAdminDTO(
             UUID id,
             String nome,
@@ -137,6 +150,16 @@ public final class AdminDtos {
     ) {}
 
     public record CriarTipoObjetoRequest(
+            @NotNull String nome,
+            @NotNull String categoria,
+            int larguraMinMm,
+            int larguraMaxMm,
+            int profundidadeMinMm,
+            int profundidadeMaxMm,
+            Integer alturaMinMm
+    ) {}
+
+    public record AtualizarTipoObjetoRequest(
             @NotNull String nome,
             @NotNull String categoria,
             int larguraMinMm,
