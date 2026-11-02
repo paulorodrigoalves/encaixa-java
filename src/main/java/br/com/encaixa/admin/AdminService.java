@@ -45,6 +45,7 @@ import org.springframework.transaction.annotation.Transactional;
 import java.time.OffsetDateTime;
 import java.util.ArrayList;
 import java.util.Comparator;
+import java.util.HashMap;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
@@ -316,8 +317,21 @@ public class AdminService {
 
     @Transactional(readOnly = true)
     public CatalogoAdminDTO obterCatalogoAdmin() {
+        List<Compra> compras = compraRepository.findAllWithClienteAndProjetos();
+        Map<UUID, Pedido> pedidosPorCompra = pedidoRepository.findAllWithDetails().stream()
+                .collect(Collectors.toMap(p -> p.getCompra().getId(), Function.identity(), (a, b) -> a));
+        Map<UUID, Long> contagemMaterial = contarProjetosEmProducaoPorMaterial(compras, pedidosPorCompra);
+        Map<UUID, Long> contagemTipoMaterial = contarProjetosEmProducaoPorTipoMaterial(compras, pedidosPorCompra);
+
         var tiposMat = tipoMaterialRepository.findAllByOrderByNomeAsc().stream()
-                .map(tm -> new TipoMaterialAdminDTO(tm.getId(), tm.getNome(), tm.getEspessuraMm(), tm.getMargemMm(), tm.isAtivo()))
+                .map(tm -> new TipoMaterialAdminDTO(
+                        tm.getId(),
+                        tm.getNome(),
+                        tm.getEspessuraMm(),
+                        tm.getMargemMm(),
+                        tm.isAtivo(),
+                        contagemTipoMaterial.getOrDefault(tm.getId(), 0L).intValue()
+                ))
                 .toList();
 
         var materiais = materialRepository.findAllWithTipoMaterial().stream()
@@ -330,7 +344,8 @@ public class AdminService {
                         m.getTipoMaterial().getNome(),
                         m.getTipoMaterial().getEspessuraMm(),
                         m.getTipoMaterial().getMargemMm(),
-                        m.isAtivo()
+                        m.isAtivo(),
+                        contagemMaterial.getOrDefault(m.getId(), 0L).intValue()
                 ))
                 .toList();
 
@@ -352,6 +367,66 @@ public class AdminService {
         return new CatalogoAdminDTO(tiposMat, materiais, tiposObj);
     }
 
+    private Map<UUID, Long> contarProjetosEmProducaoPorMaterial(List<Compra> compras, Map<UUID, Pedido> pedidosPorCompra) {
+        Map<UUID, Long> contagem = new HashMap<>();
+        for (Compra c : compras) {
+            if (c.getStatus() != Compra.StatusCompra.APROVADA) {
+                continue;
+            }
+            Pedido p = pedidosPorCompra.get(c.getId());
+            boolean entregue = p != null && !p.getEtapas().isEmpty()
+                    && "Entregue".equalsIgnoreCase(p.getEtapas().getLast().getNomeEtapa().trim());
+            if (entregue) {
+                continue;
+            }
+            if (c.getProjetos() != null) {
+                for (Projeto proj : c.getProjetos()) {
+                    if (proj.getMaterial() != null && proj.getMaterial().getId() != null) {
+                        contagem.merge(proj.getMaterial().getId(), 1L, Long::sum);
+                    }
+                }
+            }
+        }
+        return contagem;
+    }
+
+    private Map<UUID, Long> contarProjetosEmProducaoPorTipoMaterial(List<Compra> compras, Map<UUID, Pedido> pedidosPorCompra) {
+        Map<UUID, Long> contagem = new HashMap<>();
+        for (Compra c : compras) {
+            if (c.getStatus() != Compra.StatusCompra.APROVADA) {
+                continue;
+            }
+            Pedido p = pedidosPorCompra.get(c.getId());
+            boolean entregue = p != null && !p.getEtapas().isEmpty()
+                    && "Entregue".equalsIgnoreCase(p.getEtapas().getLast().getNomeEtapa().trim());
+            if (entregue) {
+                continue;
+            }
+            if (c.getProjetos() != null) {
+                for (Projeto proj : c.getProjetos()) {
+                    if (proj.getMaterial() != null && proj.getMaterial().getTipoMaterial() != null) {
+                        contagem.merge(proj.getMaterial().getTipoMaterial().getId(), 1L, Long::sum);
+                    }
+                }
+            }
+        }
+        return contagem;
+    }
+
+    private int contarPedidosEmProducaoPorMaterial(UUID materialId) {
+        List<Compra> compras = compraRepository.findAllWithClienteAndProjetos();
+        Map<UUID, Pedido> pedidosPorCompra = pedidoRepository.findAllWithDetails().stream()
+                .collect(Collectors.toMap(p -> p.getCompra().getId(), Function.identity(), (a, b) -> a));
+        return contarProjetosEmProducaoPorMaterial(compras, pedidosPorCompra).getOrDefault(materialId, 0L).intValue();
+    }
+
+    private int contarPedidosEmProducaoPorTipoMaterial(UUID tipoMaterialId) {
+        List<Compra> compras = compraRepository.findAllWithClienteAndProjetos();
+        Map<UUID, Pedido> pedidosPorCompra = pedidoRepository.findAllWithDetails().stream()
+                .collect(Collectors.toMap(p -> p.getCompra().getId(), Function.identity(), (a, b) -> a));
+        return contarProjetosEmProducaoPorTipoMaterial(compras, pedidosPorCompra).getOrDefault(tipoMaterialId, 0L).intValue();
+    }
+
     @Transactional
     public void criarTipoMaterial(CriarTipoMaterialRequest req) {
         TipoMaterial tm = new TipoMaterial();
@@ -366,6 +441,20 @@ public class AdminService {
     public void atualizarTipoMaterial(UUID id, AtualizarTipoMaterialRequest req) {
         TipoMaterial tm = tipoMaterialRepository.findById(id)
                 .orElseThrow(() -> new IllegalArgumentException("Tipo de material não encontrado."));
+
+        int pedidosAtivos = contarPedidosEmProducaoPorTipoMaterial(id);
+        if (pedidosAtivos > 0) {
+            boolean espessuraAlterada = tm.getEspessuraMm() != req.espessuraMm();
+            boolean margemAlterada = tm.getMargemMm() != req.margemMm();
+
+            if (espessuraAlterada || margemAlterada) {
+                throw new IllegalStateException(String.format(
+                        "Não é permitido alterar a espessura ou margem deste tipo de material, pois existem %d pedido(s) em andamento na produção/corte. Para novas especificações de corte, cadastre um novo tipo base.",
+                        pedidosAtivos
+                ));
+            }
+        }
+
         tm.setNome(req.nome().trim());
         tm.setEspessuraMm(req.espessuraMm());
         tm.setMargemMm(req.margemMm());
@@ -399,6 +488,20 @@ public class AdminService {
                 .orElseThrow(() -> new IllegalArgumentException("Material não encontrado."));
         TipoMaterial tm = tipoMaterialRepository.findById(req.tipoMaterialId())
                 .orElseThrow(() -> new IllegalArgumentException("Tipo de material não encontrado."));
+
+        int pedidosAtivos = contarPedidosEmProducaoPorMaterial(id);
+        if (pedidosAtivos > 0) {
+            boolean corAlterada = !m.getCor().trim().equalsIgnoreCase(req.cor().trim());
+            boolean tipoAlterado = !m.getTipoMaterial().getId().equals(req.tipoMaterialId());
+
+            if (corAlterada || tipoAlterado) {
+                throw new IllegalStateException(String.format(
+                        "Não é permitido alterar a cor ou o tipo base deste material, pois existem %d pedido(s) em andamento na produção/corte. Para novos lotes ou tecidos, cadastre um novo material ou desative o atual.",
+                        pedidosAtivos
+                ));
+            }
+        }
+
         m.setNome(req.nome().trim());
         m.setCor(req.cor().trim());
         m.setValorFixoAdicional(req.valorFixoAdicional());

@@ -96,7 +96,8 @@ public final class AdminDtos {
             String nome,
             int espessuraMm,
             int margemMm,
-            boolean ativo
+            boolean ativo,
+            int pedidosEmProducao
     ) {}
 
     public record CriarTipoMaterialRequest(
@@ -120,7 +121,8 @@ public final class AdminDtos {
             String tipoMaterialNome,
             int espessuraMm,
             int margemMm,
-            boolean ativo
+            boolean ativo,
+            int pedidosEmProducao
     ) {}
 
     public record CriarMaterialRequest(
