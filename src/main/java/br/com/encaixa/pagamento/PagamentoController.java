@@ -1,5 +1,6 @@
 package br.com.encaixa.pagamento;
 
+import br.com.encaixa.pagamento.PagamentoDtos.PagamentoCartaoRequest;
 import br.com.encaixa.pagamento.PagamentoDtos.PagamentoResponse;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -37,6 +38,25 @@ public class PagamentoController {
     @PostMapping("/api/compras/{compraId}/pagamento/pix")
     public ResponseEntity<PagamentoResponse> iniciarPix(@PathVariable UUID compraId, @AuthenticationPrincipal Jwt jwt) {
         return ResponseEntity.ok(pagamentoService.iniciarPix(compraId, jwt));
+    }
+
+    @PostMapping("/api/compras/{compraId}/pagamento/cartao")
+    public ResponseEntity<PagamentoResponse> pagarComCartao(
+            @PathVariable UUID compraId,
+            @RequestBody PagamentoCartaoRequest req,
+            @AuthenticationPrincipal Jwt jwt
+    ) {
+        return ResponseEntity.ok(pagamentoService.pagarComCartao(compraId, req, jwt));
+    }
+
+    @PostMapping("/api/compras/{compraId}/pagamento/boleto")
+    public ResponseEntity<PagamentoResponse> iniciarBoleto(@PathVariable UUID compraId, @AuthenticationPrincipal Jwt jwt) {
+        return ResponseEntity.ok(pagamentoService.iniciarBoleto(compraId, jwt));
+    }
+
+    @PostMapping("/api/compras/{compraId}/pagamento/simular-aprovacao")
+    public ResponseEntity<PagamentoResponse> simularAprovacao(@PathVariable UUID compraId, @AuthenticationPrincipal Jwt jwt) {
+        return ResponseEntity.ok(pagamentoService.simularAprovacao(compraId, jwt));
     }
 
     @GetMapping("/api/compras/{compraId}/pagamento")

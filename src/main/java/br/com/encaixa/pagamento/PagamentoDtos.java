@@ -10,10 +10,21 @@ public final class PagamentoDtos {
     public record PagamentoResponse(
             UUID pagamentoId,
             UUID compraId,
+            String metodoPagamento,
+            Integer parcelas,
             String status,
             BigDecimal valor,
             String pixCopiaCola,
             String pixQrBase64,
-            String ticketUrl
+            String ticketUrl,
+            boolean modoSimulacao
+    ) {}
+
+    public record PagamentoCartaoRequest(
+            String numeroCartao,
+            String nomeTitular,
+            String validade,
+            String cvv,
+            Integer parcelas
     ) {}
 }
