@@ -9,4 +9,5 @@ import java.util.UUID;
 @Repository
 public interface OrcamentoRepository extends JpaRepository<Orcamento, UUID> {
     Optional<Orcamento> findFirstByProjetoIdOrderByCriadoEmDesc(UUID projetoId);
+    void deleteAllByProjetoId(UUID projetoId);
 }

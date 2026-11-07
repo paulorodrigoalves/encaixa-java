@@ -12,6 +12,7 @@ import br.com.encaixa.domain.engine.model.Modelos.ConfigEscala;
 import br.com.encaixa.domain.engine.model.Modelos.MedidasGaveta;
 import br.com.encaixa.domain.engine.model.Modelos.ResultadoEscala;
 import br.com.encaixa.domain.engine.model.Modelos.TipoObjetoConstraint;
+import br.com.encaixa.pagamento.PagamentoRepository;
 import br.com.encaixa.precificacao.Orcamento;
 import br.com.encaixa.precificacao.OrcamentoRepository;
 import br.com.encaixa.precificacao.RegraPrecificacaoRepository;
@@ -46,6 +47,7 @@ public class ProjetoService {
     private final ProjetoRepository projetoRepository;
     private final OrcamentoRepository orcamentoRepository;
     private final PedidoRepository pedidoRepository;
+    private final PagamentoRepository pagamentoRepository;
     private final MaterialRepository materialRepository;
     private final TemplateRepository templateRepository;
     private final TipoObjetoRepository tipoObjetoRepository;
@@ -189,6 +191,53 @@ public class ProjetoService {
                             .toList();
                 })
                 .orElse(List.of());
+    }
+
+    @Transactional
+    public void removerProjeto(UUID projetoId, Jwt jwt) {
+        String emailJwt = extrairEmail(jwt);
+        Projeto projeto = projetoRepository.findById(projetoId)
+                .orElseThrow(() -> new IllegalArgumentException("Organizador não encontrado."));
+
+        Compra compra = projeto.getCompra();
+        if (compra != null) {
+            String emailCompra = compra.getCliente().getEmail();
+            if (emailCompra == null || !emailCompra.equalsIgnoreCase(emailJwt)) {
+                throw new IllegalArgumentException("Organizador não encontrado.");
+            }
+            if (compra.getStatus() == Compra.StatusCompra.APROVADA) {
+                throw new IllegalStateException("Não é possível remover um item cujo pagamento já foi aprovado e entrou em produção.");
+            }
+        }
+
+        orcamentoRepository.deleteAllByProjetoId(projetoId);
+        projetoRepository.delete(projeto);
+        projetoRepository.flush();
+
+        if (compra != null) {
+            // Remove cobranças pendentes vinculadas a esta compra, pois o carrinho foi alterado ou esvaziado
+            pagamentoRepository.deleteAll(pagamentoRepository.findAllByCompraIdOrderByCriadoEmDesc(compra.getId()));
+            pagamentoRepository.flush();
+
+            List<Projeto> restantes = projetoRepository.findAllByCompraIdWithCompartimentos(compra.getId());
+            if (restantes.isEmpty()) {
+                compraRepository.delete(compra);
+            } else {
+                BigDecimal novoSubtotal = BigDecimal.ZERO;
+                for (Projeto item : restantes) {
+                    BigDecimal unitario = orcamentoRepository.findFirstByProjetoIdOrderByCriadoEmDesc(item.getId())
+                            .map(Orcamento::getValorTotal)
+                            .orElse(BigDecimal.ZERO);
+                    novoSubtotal = novoSubtotal.add(unitario.multiply(BigDecimal.valueOf(item.getQuantidade())));
+                }
+                // Reabre a cotação de frete para recalcular pacote/peso com os itens restantes
+                compra.setTransportadora(null);
+                compra.setValorFrete(BigDecimal.ZERO);
+                compra.setPrazoFreteDias(null);
+                compra.setValorTotal(novoSubtotal);
+                compraRepository.save(compra);
+            }
+        }
     }
 
     private Cliente resolverOuCriarCliente(Jwt jwt) {
