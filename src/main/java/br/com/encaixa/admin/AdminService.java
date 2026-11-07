@@ -1,5 +1,6 @@
 package br.com.encaixa.admin;
 
+import br.com.encaixa.admin.AdminDtos.AtualizarEtapaProducaoRequest;
 import br.com.encaixa.admin.AdminDtos.AtualizarMaterialRequest;
 import br.com.encaixa.admin.AdminDtos.AtualizarRegraPrecoRequest;
 import br.com.encaixa.admin.AdminDtos.AtualizarTipoMaterialRequest;
@@ -7,6 +8,7 @@ import br.com.encaixa.admin.AdminDtos.AtualizarTipoObjetoRequest;
 import br.com.encaixa.admin.AdminDtos.CatalogoAdminDTO;
 import br.com.encaixa.admin.AdminDtos.CompartimentoCorteDTO;
 import br.com.encaixa.admin.AdminDtos.CompraAdminDTO;
+import br.com.encaixa.admin.AdminDtos.CriarEtapaProducaoRequest;
 import br.com.encaixa.admin.AdminDtos.CriarMaterialRequest;
 import br.com.encaixa.admin.AdminDtos.CriarTipoMaterialRequest;
 import br.com.encaixa.admin.AdminDtos.CriarTipoObjetoRequest;
@@ -109,7 +111,7 @@ public class AdminService {
     @Transactional(readOnly = true)
     public List<EtapaProducaoDTO> listarEtapasCatalogo() {
         return etapaProducaoRepository.findAllByAtivoTrueOrderByOrdemAsc().stream()
-                .map(e -> new EtapaProducaoDTO(e.getId(), e.getNome(), e.getOrdem(), e.isUsaRastreio()))
+                .map(e -> new EtapaProducaoDTO(e.getId(), e.getNome(), e.getOrdem(), e.isUsaRastreio(), e.isAtivo()))
                 .toList();
     }
 
@@ -373,7 +375,11 @@ public class AdminService {
                 ))
                 .toList();
 
-        return new CatalogoAdminDTO(tiposMat, materiais, tiposObj);
+        var etapas = etapaProducaoRepository.findAllByOrderByOrdemAscNomeAsc().stream()
+                .map(e -> new EtapaProducaoDTO(e.getId(), e.getNome(), e.getOrdem(), e.isUsaRastreio(), e.isAtivo()))
+                .toList();
+
+        return new CatalogoAdminDTO(tiposMat, materiais, tiposObj, etapas);
     }
 
     private Map<UUID, Long> contarProjetosEmProducaoPorMaterial(List<Compra> compras, Map<UUID, Pedido> pedidosPorCompra) {
@@ -582,5 +588,66 @@ public class AdminService {
                 .orElseThrow(() -> new IllegalArgumentException("Tipo de objeto não encontrado."));
         to.setAtivo(!to.isAtivo());
         tipoObjetoRepository.save(to);
+    }
+
+    @Transactional
+    public void criarEtapaProducao(CriarEtapaProducaoRequest req) {
+        String nomeLimpo = req.nome() == null ? "" : req.nome().trim();
+        if (nomeLimpo.isEmpty()) {
+            throw new IllegalArgumentException("Informe o nome da etapa de produção.");
+        }
+        if (etapaProducaoRepository.existsByNomeIgnoreCase(nomeLimpo)) {
+            throw new IllegalArgumentException("Já existe uma etapa cadastrada com o nome \"" + nomeLimpo + "\".");
+        }
+
+        int proximaOrdem = req.ordem() != null && req.ordem() > 0
+                ? req.ordem()
+                : etapaProducaoRepository.findAllByOrderByOrdemAscNomeAsc().stream()
+                        .mapToInt(EtapaProducao::getOrdem)
+                        .max()
+                        .orElse(0) + 1;
+
+        EtapaProducao ep = new EtapaProducao();
+        ep.setNome(nomeLimpo);
+        ep.setOrdem(proximaOrdem);
+        ep.setUsaRastreio(req.usaRastreio());
+        ep.setAtivo(true);
+        etapaProducaoRepository.save(ep);
+    }
+
+    @Transactional
+    public void atualizarEtapaProducao(UUID id, AtualizarEtapaProducaoRequest req) {
+        EtapaProducao ep = etapaProducaoRepository.findById(id)
+                .orElseThrow(() -> new IllegalArgumentException("Etapa de produção não encontrada."));
+
+        String nomeLimpo = req.nome() == null ? "" : req.nome().trim();
+        if (nomeLimpo.isEmpty()) {
+            throw new IllegalArgumentException("Informe o nome da etapa de produção.");
+        }
+        if (etapaProducaoRepository.existsByNomeIgnoreCaseAndIdNot(nomeLimpo, id)) {
+            throw new IllegalArgumentException("Já existe outra etapa com o nome \"" + nomeLimpo + "\".");
+        }
+
+        ep.setNome(nomeLimpo);
+        if (req.ordem() != null && req.ordem() > 0) {
+            ep.setOrdem(req.ordem());
+        }
+        ep.setUsaRastreio(req.usaRastreio());
+        etapaProducaoRepository.save(ep);
+    }
+
+    @Transactional
+    public void alternarAtivoEtapaProducao(UUID id) {
+        EtapaProducao ep = etapaProducaoRepository.findById(id)
+                .orElseThrow(() -> new IllegalArgumentException("Etapa de produção não encontrada."));
+        ep.setAtivo(!ep.isAtivo());
+        etapaProducaoRepository.save(ep);
+    }
+
+    @Transactional
+    public void excluirEtapaProducao(UUID id) {
+        EtapaProducao ep = etapaProducaoRepository.findById(id)
+                .orElseThrow(() -> new IllegalArgumentException("Etapa de produção não encontrada."));
+        etapaProducaoRepository.delete(ep);
     }
 }

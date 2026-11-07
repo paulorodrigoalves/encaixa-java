@@ -1,11 +1,13 @@
 package br.com.encaixa.admin;
 
+import br.com.encaixa.admin.AdminDtos.AtualizarEtapaProducaoRequest;
 import br.com.encaixa.admin.AdminDtos.AtualizarMaterialRequest;
 import br.com.encaixa.admin.AdminDtos.AtualizarRegraPrecoRequest;
 import br.com.encaixa.admin.AdminDtos.AtualizarTipoMaterialRequest;
 import br.com.encaixa.admin.AdminDtos.AtualizarTipoObjetoRequest;
 import br.com.encaixa.admin.AdminDtos.CatalogoAdminDTO;
 import br.com.encaixa.admin.AdminDtos.CompraAdminDTO;
+import br.com.encaixa.admin.AdminDtos.CriarEtapaProducaoRequest;
 import br.com.encaixa.admin.AdminDtos.CriarMaterialRequest;
 import br.com.encaixa.admin.AdminDtos.CriarTipoMaterialRequest;
 import br.com.encaixa.admin.AdminDtos.CriarTipoObjetoRequest;
@@ -18,6 +20,7 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.security.oauth2.jwt.Jwt;
+import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PatchMapping;
 import org.springframework.web.bind.annotation.PathVariable;
@@ -146,5 +149,32 @@ public class AdminController {
     public ResponseEntity<Void> alternarAtivoTipoObjeto(@PathVariable UUID id) {
         adminService.alternarAtivoTipoObjeto(id);
         return ResponseEntity.ok().build();
+    }
+
+    @PostMapping("/catalogo/etapas-producao")
+    public ResponseEntity<Void> criarEtapaProducao(@RequestBody @Valid CriarEtapaProducaoRequest req) {
+        adminService.criarEtapaProducao(req);
+        return ResponseEntity.ok().build();
+    }
+
+    @PutMapping("/catalogo/etapas-producao/{id}")
+    public ResponseEntity<Void> atualizarEtapaProducao(
+            @PathVariable UUID id,
+            @RequestBody @Valid AtualizarEtapaProducaoRequest req
+    ) {
+        adminService.atualizarEtapaProducao(id, req);
+        return ResponseEntity.ok().build();
+    }
+
+    @PatchMapping("/catalogo/etapas-producao/{id}/toggle-ativo")
+    public ResponseEntity<Void> alternarAtivoEtapaProducao(@PathVariable UUID id) {
+        adminService.alternarAtivoEtapaProducao(id);
+        return ResponseEntity.ok().build();
+    }
+
+    @DeleteMapping("/catalogo/etapas-producao/{id}")
+    public ResponseEntity<Void> excluirEtapaProducao(@PathVariable UUID id) {
+        adminService.excluirEtapaProducao(id);
+        return ResponseEntity.noContent().build();
     }
 }

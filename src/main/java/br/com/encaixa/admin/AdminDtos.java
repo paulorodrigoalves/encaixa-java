@@ -29,6 +29,19 @@ public final class AdminDtos {
             UUID id,
             String nome,
             Integer ordem,
+            boolean usaRastreio,
+            boolean ativo
+    ) {}
+
+    public record CriarEtapaProducaoRequest(
+            @NotNull String nome,
+            Integer ordem,
+            boolean usaRastreio
+    ) {}
+
+    public record AtualizarEtapaProducaoRequest(
+            @NotNull String nome,
+            Integer ordem,
             boolean usaRastreio
     ) {}
 
@@ -177,6 +190,7 @@ public final class AdminDtos {
     public record CatalogoAdminDTO(
             List<TipoMaterialAdminDTO> tiposMaterial,
             List<MaterialAdminDTO> materiais,
-            List<TipoObjetoAdminDTO> tiposObjeto
+            List<TipoObjetoAdminDTO> tiposObjeto,
+            List<EtapaProducaoDTO> etapasProducao
     ) {}
 }

@@ -9,4 +9,7 @@ import java.util.UUID;
 @Repository
 public interface EtapaProducaoRepository extends JpaRepository<EtapaProducao, UUID> {
     List<EtapaProducao> findAllByAtivoTrueOrderByOrdemAsc();
+    List<EtapaProducao> findAllByOrderByOrdemAscNomeAsc();
+    boolean existsByNomeIgnoreCase(String nome);
+    boolean existsByNomeIgnoreCaseAndIdNot(String nome, UUID id);
 }
